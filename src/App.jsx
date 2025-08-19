@@ -16,8 +16,11 @@ import EchoLanding from "./pages/EchoLanding.jsx";
 import InfoConnect from "./pages/Connect/InfoConnect.jsx";
 import ExperienceConnect from "./pages/Connect/ExperienceConnect.jsx";
 import SupportConnect from "./pages/Connect/SupportConnect.jsx";
-
+import Dashboard from "./pages/Dashboard.jsx";
 /** 카드(공감/성찰/성장) 화면 – 루트("/")에서 사용 */
+
+console.log("ENV:", import.meta.env);
+
 function CardsPage() {
   const location = useLocation();
   const [step, setStep] = useState(1); // 1: 공감, 2: 성찰, 3: 성장
@@ -60,7 +63,7 @@ export default function App() {
         <Route path="/connect/info" element={<InfoConnect />} />
         <Route path="/connect/experience" element={<ExperienceConnect />} />
         <Route path="/connect/support" element={<SupportConnect />} />
-
+        <Route path="/dashboard" element={<Dashboard />} />
 
         {/* 404 */}
         <Route path="*" element={<div style={{ padding: 40 }}>404</div>} />
