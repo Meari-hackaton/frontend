@@ -20,6 +20,7 @@ export default function LoginPage() {
   
   const handleGoogleLogin = () => {
     // 백엔드 OAuth 시작점으로 리다이렉트
+    // 온보딩 완료 여부는 로그인 후 자동 판단하여 리다이렉트
     window.location.href = `${process.env.REACT_APP_API_URL}/auth/google/login?redirect_url=${encodeURIComponent('http://localhost:3000/dashboard')}`;
   };
 

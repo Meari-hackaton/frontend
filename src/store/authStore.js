@@ -9,12 +9,14 @@ const authStore = create(
         // 상태
         user: null,
         isAuthenticated: false,
+        onboardingCompleted: false,
         loading: false,
         
         // 액션
         setUser: (user) => set({ 
           user, 
-          isAuthenticated: !!user 
+          isAuthenticated: !!user,
+          onboardingCompleted: user?.onboardingCompleted || false
         }),
         
         setLoading: (loading) => set({ loading }),
@@ -32,6 +34,7 @@ const authStore = create(
               set({ 
                 user: userData, 
                 isAuthenticated: true,
+                onboardingCompleted: userData.onboardingCompleted || false,
                 loading: false 
               });
               return userData;
@@ -39,6 +42,7 @@ const authStore = create(
               set({ 
                 user: null, 
                 isAuthenticated: false,
+                onboardingCompleted: false,
                 loading: false 
               });
               return null;
@@ -48,6 +52,7 @@ const authStore = create(
             set({ 
               user: null, 
               isAuthenticated: false,
+              onboardingCompleted: false,
               loading: false 
             });
             return null;
@@ -65,7 +70,8 @@ const authStore = create(
             if (response.ok) {
               set({ 
                 user: null, 
-                isAuthenticated: false 
+                isAuthenticated: false,
+                onboardingCompleted: false
               });
               window.location.href = '/';
             }
