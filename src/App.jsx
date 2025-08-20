@@ -13,7 +13,8 @@ import InfoConnect from "./pages/Connect/InfoConnect.jsx";
 import ExperienceConnect from "./pages/Connect/ExperienceConnect.jsx";
 import SupportConnect from "./pages/Connect/SupportConnect.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
-
+import Signup from "./pages/Signup"; 
+import GreetingPage from "./pages/GreetingPage.jsx";
 // Protected Route 컴포넌트
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading, checkAuth } = authStore();
@@ -54,6 +55,8 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/steps" element={<StepsWizard />} />
         <Route path="/echo" element={<EchoLanding />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/greeting" element={<GreetingPage />} />
         
         {/* Protected Routes - 로그인 필요 */}
         <Route path="/connect/info" element={

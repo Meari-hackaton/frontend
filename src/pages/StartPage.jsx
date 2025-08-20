@@ -22,6 +22,7 @@ export default function StartPage() {
           >
             로그아웃
           </button>
+<<<<<<< HEAD
         </div>
       )}
 
@@ -43,7 +44,10 @@ export default function StartPage() {
             alt="MEARI Logo"
             className="w-20 h-auto"
           />
+=======
+>>>>>>> 5ac97a7c4ae0adce95e3f279ff6a3c3290698e1b
         </div>
+      )}
 
         {/* 서브 카피 */}
         <div className="text-center mb-12 max-w-md">
@@ -55,7 +59,7 @@ export default function StartPage() {
           </p>
         </div>
 
-        {/* 시작하기/대시보드 버튼 */}
+        {/* 시작하기/대시보드 버튼 */>
         <button
           type="button"
           onClick={() => {

@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
+// src/pages/Dashboard.jsx
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import authStore from '../store/authStore';
+import axios from "axios";
+import authStore from "../store/authStore";
 
-/* ─────────────────────────────────  공통 작은 컴포넌트  ───────────────────────────────── */
+/* ───────────────────────────── 공통 작은 컴포넌트 ───────────────────────────── */
 function StatPill({ icon, label, value, unit }) {
   return (
     <div className="flex items-center gap-3 w-[165px] rounded-full bg-white/70 border border-blue-100 px-3 py-2 shadow-[0_6px_22px_rgba(30,64,175,0.10)]">
@@ -25,7 +27,6 @@ function PenIcon({ className = "w-4 h-4" }) {
     </svg>
   );
 }
-
 
 function Card({ children, className = "" }) {
   return (
@@ -59,16 +60,52 @@ function CheckIcon({ done }) {
   );
 }
 
-/* ─────────────────────────────────  미니 캘린더  ───────────────────────────────── */
+/* ───────────────────────────── 캘린더(달력 API 연동) ───────────────────────────── */
 function MiniCalendar() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth()); // 0~11
 
+  const [daysMap, setDaysMap] = useState(() => new Map());
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const api = axios.create({
+    baseURL: import.meta?.env?.VITE_API_BASE_URL || "",
+    withCredentials: true,
+  });
+
+  const fetchCalendar = async (y, m0) => {
+    try {
+      setLoading(true);
+      const { data } = await api.get("/api/v1/dashboard/calendar", {
+        params: { year: y, month: m0 + 1 }, // API는 1~12
+      });
+      const map = new Map();
+      (data?.days || []).forEach((d) => {
+        const dd = Number(d.date?.split("-")?.[2]);
+        if (!Number.isNaN(dd)) map.set(dd, d);
+      });
+      setDaysMap(map);
+      setSummary(data?.summary || null);
+    } catch (e) {
+      console.error("달력 데이터 로드 실패:", e);
+      setDaysMap(new Map());
+      setSummary(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCalendar(year, month);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, month]);
+
   const { weeks, monthLabel } = useMemo(() => {
     const first = new Date(year, month, 1);
     const last = new Date(year, month + 1, 0);
-    const startDay = first.getDay(); // 0 Sun
+    const startDay = first.getDay();
     const daysInMonth = last.getDate();
 
     const cells = [];
@@ -79,8 +116,7 @@ function MiniCalendar() {
     const rows = [];
     for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
 
-    const label = `${month + 1}월`;
-    return { weeks: rows, monthLabel: label };
+    return { weeks: rows, monthLabel: `${month + 1}월` };
   }, [year, month]);
 
   const goPrev = () => {
@@ -96,70 +132,436 @@ function MiniCalendar() {
     } else setMonth((m) => m + 1);
   };
 
-  const marks = new Set([4,5,6,7,8,9,10,11,12,13,15,16,17]); // 데모 표시
+  const dayClasses = (d) => {
+    const info = daysMap.get(d);
+    if (!info) return "bg-white border border-blue-100 text-slate-600";
+    if (info.is_completed) return "bg-blue-600 text-white shadow-[0_6px_18px_rgba(30,64,175,0.25)]";
+    if (info.has_ritual) return "bg-blue-100 text-blue-700 border border-blue-200";
+    return "bg-white border border-blue-100 text-slate-600";
+  };
 
   return (
     <Card className="p-0 overflow-hidden w-[520px]">
-      {/* 헤더 */}
       <div className="px-8 pt-6 pb-3">
         <div className="flex items-center justify-center gap-6 text-slate-600">
           <button onClick={goPrev} className="text-slate-400 hover:text-slate-600">◀</button>
-          <div className="text-[15px] font-semibold">{monthLabel}</div>
+          <div className="text-[15px] font-semibold">
+            {monthLabel} {loading && <span className="ml-2 text-xs text-slate-400">(불러오는 중)</span>}
+          </div>
           <button onClick={goNext} className="text-slate-400 hover:text-slate-600">▶</button>
         </div>
       </div>
 
-      {/* 요일 */}
       <div className="grid grid-cols-7 text-center text-[12px] text-slate-400 px-8 pb-2">
         {["일","월","화","수","목","금","토"].map((d) => (
           <div key={d} className="py-1">{d}</div>
         ))}
       </div>
 
-      {/* 날짜 */}
-      <div className="grid grid-cols-7 gap-3 px-8 pb-8">
-        {weeks.map((row, i) => (
-          row.map((d, j) => (
-            <div key={`${i}-${j}`} className="h-10 flex items-center justify-center">
-              {d ? (
-                <div
-                  className={
-                    "w-10 h-10 flex items-center justify-center rounded-full text-[13px] " +
-                    (marks.has(d)
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-white border border-blue-100 text-slate-600")
-                  }
-                >
-                  {d}
-                </div>
-              ) : (
-                <div className="w-10 h-10" />
-              )}
+      <div className="grid grid-cols-7 gap-3 px-8 pb-4">
+        {weeks.map((row, i) =>
+          row.map((d, j) => {
+            const info = d ? daysMap.get(d) : null;
+            return (
+              <div key={`${i}-${j}`} className="h-10 flex items-center justify-center">
+                {d ? (
+                  <div
+                    title={
+                      info
+                        ? `${d}일 • ${info.is_completed ? "완료" : info.has_ritual ? "리추얼 있음" : "리추얼 없음"}${
+                            info.ritual_title ? ` • ${info.ritual_title}` : ""
+                          }`
+                        : `${d}일`
+                    }
+                    className={
+                      "w-10 h-10 flex items-center justify-center rounded-full text-[13px] transition-all " +
+                      dayClasses(d)
+                    }
+                  >
+                    {d}
+                  </div>
+                ) : (
+                  <div className="w-10 h-10" />
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className="px-8 pb-6">
+        {summary ? (
+          <div className="grid grid-cols-3 gap-3 text-[12px] text-slate-600">
+            <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+              완료일수<br/><span className="text-[13px] font-semibold text-blue-700">{summary.completed_days}</span>
             </div>
-          ))
-        ))}
+            <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+              달성률<br/><span className="text-[13px] font-semibold text-blue-700">{summary.completion_rate}%</span>
+            </div>
+            <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+              연속일수<br/><span className="text-[13px] font-semibold text-blue-700">{summary.current_streak}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="text-[12px] text-slate-400">요약 정보를 불러오지 못했어요.</div>
+        )}
       </div>
     </Card>
   );
 }
 
-/* ─────────────────────────────────  메인 페이지  ───────────────────────────────── */
+/* ───────────────────────────── 오늘의 리추얼 카드 (조회/완료/생성) ───────────────────────────── */
+function TodayRitualCard() {
+  const api = axios.create({
+    baseURL: import.meta?.env?.VITE_API_BASE_URL || "",
+    withCredentials: true,
+  });
+
+  const [ritual, setRitual] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // 생성 폼 상태
+  const [openForm, setOpenForm] = useState(false);
+  const [form, setForm] = useState({
+    title: "",
+    type: "meditation",
+    duration_minutes: 10,
+    description: "",
+  });
+
+  // 완료 폼 상태
+  const [openComplete, setOpenComplete] = useState(false);
+  const [completeForm, setCompleteForm] = useState({
+    difficulty_rating: 2,
+    user_mood: "",
+    user_note: "",
+  });
+
+  const fetchToday = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get("/api/v1/dashboard/rituals/today");
+      setRitual(data || null);
+      setErr(null);
+      setOpenForm(!data); // 오늘 리추얼 없으면 생성 폼 열기
+    } catch (e) {
+      console.error(e);
+      setErr(e);
+      setRitual(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchToday();
+  }, []);
+
+  const submitComplete = async (e) => {
+    e?.preventDefault?.();
+    if (!ritual?.id) return;
+    try {
+      setSubmitting(true);
+      await api.patch(`/api/v1/dashboard/rituals/${ritual.id}/complete`, {
+        difficulty_rating: Number(completeForm.difficulty_rating) || 0,
+        user_mood: (completeForm.user_mood || "").trim(),
+        user_note: (completeForm.user_note || "").trim(),
+      });
+      setOpenComplete(false);
+      await fetchToday();
+    } catch (e) {
+      console.error(e);
+      alert("리추얼 완료 처리에 실패했어요.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const create = async (e) => {
+    e?.preventDefault?.();
+    if (!form.title?.trim()) {
+      alert("제목을 입력해 주세요.");
+      return;
+    }
+    try {
+      setSubmitting(true);
+      const { data } = await api.post("/api/v1/dashboard/rituals", {
+        title: form.title.trim(),
+        type: form.type,
+        duration_minutes: Number(form.duration_minutes) || 0,
+        description: form.description?.trim() || "",
+      });
+      setRitual(data);
+      setOpenForm(false);
+    } catch (e) {
+      console.error(e);
+      alert("리추얼 생성에 실패했어요.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Card className="w-[520px]">
+      <div className="flex items-center justify-between mb-4">
+        <div className="font-semibold text-slate-700">리추얼 실천하기</div>
+
+        {ritual && !ritual.is_completed && (
+          <button
+            onClick={() => setOpenComplete(true)}
+            className="rounded-full bg-blue-600 text-white px-3 py-1.5 text-xs hover:brightness-110"
+          >
+            완료하기
+          </button>
+        )}
+        {!ritual && (
+          <button
+            onClick={() => setOpenForm((v) => !v)}
+            className="rounded-full bg-blue-600 text-white px-3 py-1.5 text-xs hover:brightness-110"
+          >
+            {openForm ? "닫기" : "리추얼 만들기"}
+          </button>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="h-6 w-60 bg-slate-200 rounded animate-pulse" />
+      ) : err ? (
+        <div className="text-[13px] text-red-500">오늘의 리추얼을 불러오지 못했습니다.</div>
+      ) : ritual ? (
+        <>
+          <div className="flex items-center gap-3">
+            <CheckIcon done={ritual.is_completed} />
+            <div className={"text-[14px] " + (ritual.is_completed ? "text-blue-700" : "text-slate-700")}>
+              {ritual.title}
+            </div>
+          </div>
+
+          {ritual.description && (
+            <p className="mt-2 text-[13px] text-slate-500 leading-relaxed whitespace-pre-line">
+              {ritual.description}
+            </p>
+          )}
+
+          <div className="mt-2 grid grid-cols-3 gap-2 text-[12px] text-slate-600">
+            <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+              유형<br/><span className="text-[13px] font-semibold text-blue-700">{ritual.type}</span>
+            </div>
+            <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+              난이도<br/><span className="text-[13px] font-semibold text-blue-700">{ritual.difficulty_rating ?? "-"}</span>
+            </div>
+            <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+              소요시간<br/><span className="text-[13px] font-semibold text-blue-700">{ritual.duration_minutes ?? 0}분</span>
+            </div>
+          </div>
+
+          {ritual.is_completed && (
+            <div className="mt-2 text-[12px] text-slate-500">
+              {ritual.completed_at && <div>완료시간: {ritual.completed_at}</div>}
+              {ritual.user_mood && <div>기분: {ritual.user_mood}</div>}
+              {ritual.user_note && <div>메모: {ritual.user_note}</div>}
+            </div>
+          )}
+
+          {/* 완료 입력 폼 */}
+          {openComplete && !ritual.is_completed && (
+            <form onSubmit={submitComplete} className="mt-4 p-4 rounded-2xl border border-blue-100 bg-blue-50/40">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[12px] text-slate-500">난이도(1~5)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={5}
+                    value={completeForm.difficulty_rating}
+                    onChange={(e) =>
+                      setCompleteForm((f) => ({ ...f, difficulty_rating: e.target.value }))
+                    }
+                    className="w-full rounded-xl border border-blue-100 px-3 py-2 text-[14px]"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[12px] text-slate-500">기분</label>
+                  <input
+                    value={completeForm.user_mood}
+                    onChange={(e) => setCompleteForm((f) => ({ ...f, user_mood: e.target.value }))}
+                    placeholder="calm, energetic…"
+                    className="w-full rounded-xl border border-blue-100 px-3 py-2 text-[14px]"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <label className="text-[12px] text-slate-500">메모</label>
+                <textarea
+                  rows={3}
+                  value={completeForm.user_note}
+                  onChange={(e) => setCompleteForm((f) => ({ ...f, user_note: e.target.value }))}
+                  placeholder="명상 후 마음이 많이 편안해졌어요"
+                  className="w-full rounded-xl border border-blue-100 px-3 py-2 text-[14px]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 mt-3">
+                <button
+                  type="button"
+                  onClick={() => setOpenComplete(false)}
+                  className="rounded-full border border-slate-200 px-4 py-2 text-[13px] text-slate-600 hover:bg-slate-50"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="rounded-full bg-blue-600 text-white px-4 py-2 text-[13px] hover:brightness-110 disabled:opacity-60"
+                >
+                  {submitting ? "저장 중…" : "완료 저장"}
+                </button>
+              </div>
+            </form>
+          )}
+        </>
+      ) : openForm ? (
+        <form onSubmit={create} className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 gap-2">
+            <label className="text-[12px] text-slate-500">제목</label>
+            <input
+              value={form.title}
+              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+              placeholder="예: 10분 명상하기"
+              className="rounded-xl border border-blue-100 px-3 py-2 text-[14px] outline-none focus:ring-2 focus:ring-blue-200"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[12px] text-slate-500">유형</label>
+              <select
+                value={form.type}
+                onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+                className="w-full rounded-xl border border-blue-100 px-3 py-2 text-[14px]"
+              >
+                <option value="meditation">meditation</option>
+                <option value="exercise">exercise</option>
+                <option value="reading">reading</option>
+                <option value="writing">writing</option>
+                <option value="etc">etc</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[12px] text-slate-500">소요시간(분)</label>
+              <input
+                type="number"
+                min={0}
+                value={form.duration_minutes}
+                onChange={(e) => setForm((f) => ({ ...f, duration_minutes: e.target.value }))}
+                className="w-full rounded-xl border border-blue-100 px-3 py-2 text-[14px]"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2">
+            <label className="text-[12px] text-slate-500">설명</label>
+            <textarea
+              rows={3}
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              placeholder="조용한 곳에서 호흡에 집중하며 마음을 가라앉히세요…"
+              className="rounded-xl border border-blue-100 px-3 py-2 text-[14px] outline-none focus:ring-2 focus:ring-blue-200"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 mt-1">
+            <button
+              type="button"
+              onClick={() => setOpenForm(false)}
+              className="rounded-full border border-slate-200 px-4 py-2 text-[13px] text-slate-600 hover:bg-slate-50"
+            >
+              취소
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="rounded-full bg-blue-600 text-white px-4 py-2 text-[13px] hover:brightness-110 disabled:opacity-60"
+            >
+              {submitting ? "생성 중..." : "오늘의 리추얼 생성"}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="text-[13px] text-slate-400">오늘의 리추얼이 없습니다.</div>
+      )}
+    </Card>
+  );
+}
+
+/* ───────────────────────────── 메인 페이지 ───────────────────────────── */
 export default function Dashboard() {
   const { user, isAuthenticated, logout } = authStore();
   const username = user?.nickname || "사용자님";
-  const rituals = [
-    { text: "청년 창업 아이디어 피칭데이 참여", done: false },
-    { text: "새로운 실로 10분 산책하기", done: true },
-    { text: "청년 마음건강 바우처 신청하기", done: true },
-  ];
+
+  const api = axios.create({
+    baseURL: import.meta?.env?.VITE_API_BASE_URL || "",
+    withCredentials: true, // 쿠키 세션 사용
+  });
+
+  const [dash, setDash] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(null);
+
+  // streak
+  const [streak, setStreak] = useState(null);
+  const [streakLoading, setStreakLoading] = useState(true);
+  const [streakErr, setStreakErr] = useState(null);
+
+  const fetchDashboard = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get("/api/v1/dashboard/");
+      setDash(data);
+      setErr(null);
+    } catch (e) {
+      console.error(e);
+      setErr(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStreak = async () => {
+    try {
+      setStreakLoading(true);
+      const { data } = await api.get("/api/v1/dashboard/streak");
+      setStreak(data || null);
+      setStreakErr(null);
+    } catch (e) {
+      console.error(e);
+      setStreak(null);
+      setStreakErr(e);
+    } finally {
+      setStreakLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboard();
+    fetchStreak();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const stats = dash?.statistics;
+  const notificationMsg = dash?.notifications?.[0]?.message;
+  const level = dash?.level;
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* 배경 (큰 그라데이션, 중앙이 비어 보이게) */}
+      {/* 배경 */}
       <div className="absolute inset-0 bg-[radial-gradient(1200px_700px_at_48%_55%,rgba(147,197,253,0.46),transparent_60%)]" />
 
-      {/* 상단바(오른쪽 로그인/로그아웃) */}
-      <header className="relative z-10 flex items-center justify-end gap-3 w-full max-w-[1280px] mx-auto px-8 pt-7">
+      {/* 상단바 */}
+      <header className="relative z-50 flex items-center justify-end gap-3 w-full max-w-[1280px] mx-auto px-8 pt-7">
         <div className="text-slate-500 text-sm">{username}</div>
         {isAuthenticated ? (
           <button
@@ -178,23 +580,80 @@ export default function Dashboard() {
         )}
       </header>
 
-      {/* 본문 레이아웃: 왼쪽 칩, 오른쪽 고정 컬럼 */}
-      <main className="relative z-10 w-full max-w-[1280px] mx-auto px-8">
-        {/* 왼쪽 작은 칩들 */}
+      {/* 본문: 2열 그리드 */}
+      <main className="relative z-10 w-full max-w-[1280px] mx-auto px-8 grid grid-cols-[auto_520px] gap-10 items-start">
+        {/* 활동 카운팅 */}
         <section className="pt-6">
           <h2 className="text-[15px] font-semibold text-slate-700 mb-4">활동 카운팅</h2>
-          <div className="flex flex-col gap-3">
-            <StatPill icon={<span>🔥</span>} label="연속 방문" value={16} unit="일째" />
-            <StatPill icon={<span>📍</span>} label="리추얼" value={16} unit="개" />
-            <StatPill icon={<span>🎯</span>} label="실천 리추얼" value={13} unit="개" />
+
+          {loading ? (
+            <div className="flex flex-col gap-3 animate-pulse">
+              <div className="h-10 w-[165px] rounded-full bg-slate-200" />
+              <div className="h-10 w-[165px] rounded-full bg-slate-200" />
+              <div className="h-10 w-[165px] rounded-full bg-slate-200" />
+            </div>
+          ) : err ? (
+            <div className="text-sm text-red-500">대시보드 데이터를 불러오지 못했습니다.</div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <StatPill icon={<span>🔥</span>} label="연속 방문" value={stats?.continuous_days ?? 0} unit="일째" />
+              <StatPill icon={<span>📍</span>} label="리추얼" value={stats?.total_rituals ?? 0} unit="개" />
+              <StatPill icon={<span>🎯</span>} label="실천 리추얼" value={stats?.practiced_rituals ?? 0} unit="개" />
+            </div>
+          )}
+
+          {level && !loading && (
+            <div className="mt-5 text-[14px] text-slate-600">
+              현재 <span className="font-semibold">{level.stage_label}</span> 단계 · 진행률{" "}
+              <span className="font-semibold">{level.percentage}%</span>
+            </div>
+          )}
+
+          {/* 연속 기록 카드 */}
+          <div className="mt-6">
+            <Card className="max-w-[520px]">
+              <div className="font-semibold text-slate-700 mb-3">연속 기록</div>
+              {streakLoading ? (
+                <div className="space-y-2 animate-pulse">
+                  <div className="h-4 w-40 bg-slate-200 rounded" />
+                  <div className="h-4 w-48 bg-slate-200 rounded" />
+                  <div className="h-4 w-56 bg-slate-200 rounded" />
+                </div>
+              ) : streakErr ? (
+                <div className="text-[13px] text-red-500">연속 기록을 불러오지 못했습니다.</div>
+              ) : streak ? (
+                <div className="grid grid-cols-2 gap-3 text-[13px] text-slate-600">
+                  <div className="rounded-xl bg-white border border-blue-100 px-3 py-2">
+                    현재 연속일<br/><span className="text-blue-700 font-semibold">{streak.current_streak}</span>
+                  </div>
+                  <div className="rounded-xl bg-white border border-blue-100 px-3 py-2">
+                    최장 연속일<br/><span className="text-blue-700 font-semibold">{streak.longest_streak}</span>
+                  </div>
+                  <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 col-span-2">
+                    마지막 활동일<br/><span className="text-blue-700 font-semibold">{streak.last_activity_date}</span>
+                  </div>
+                  <div className="rounded-xl bg-white border border-blue-100 px-3 py-2">
+                    활동한 총 일수<br/><span className="text-blue-700 font-semibold">{streak.total_days_active}</span>
+                  </div>
+                  <div className="rounded-xl bg-white border border-blue-100 px-3 py-2">
+                    완료한 리추얼<br/><span className="text-blue-700 font-semibold">{streak.total_rituals_completed}</span>
+                  </div>
+                  <div className="rounded-xl bg-white border border-blue-100 px-3 py-2">
+                    생성한 리추얼<br/><span className="text-blue-700 font-semibold">{streak.total_rituals_created}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-[13px] text-slate-400">표시할 연속 기록이 없어요.</div>
+              )}
+            </Card>
           </div>
         </section>
 
-        {/* 우측 컬럼: 화면 오른쪽에 붙여 중앙을 넘지 않도록 고정 폭/위치 */}
-        <aside className="pointer-events-none">
-          <div className="pointer-events-auto w-[400px] ml-auto mt-[-180px] mr-0 flex flex-col gap-6">
+        {/* 우측 컬럼 */}
+        <aside>
+          <div className="w-[520px] ml-auto mr-0 flex flex-col gap-6">
             {/* 오늘의 소식 */}
-            <Card className="w-[520px]">
+            <Card>
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
                   <BellIcon className="w-6 h-6" />
@@ -202,60 +661,38 @@ export default function Dashboard() {
                 <div className="flex-1">
                   <div className="font-semibold text-slate-700 mb-1">오늘의 소식</div>
                   <p className="text-[13px] text-slate-500 leading-relaxed">
-                    {username}에게 알맞은 정책 정보가 있습니다. <br />
-                    확인해보시겠습니까?
+                    {loading ? "불러오는 중..." : (notificationMsg || "새 소식이 없습니다.")}
                   </p>
                 </div>
               </div>
             </Card>
 
-            {/* 리추얼 실천하기 */}
-            <Card className="w-[520px]">
-              <div className="font-semibold text-slate-700 mb-4">리추얼 실천하기</div>
-              <ul className="flex flex-col gap-4">
-                {rituals.map((r, idx) => (
-                  <li key={idx} className="flex items-center gap-3">
-                    <CheckIcon done={r.done} />
-                    <div className={"text-[14px] " + (r.done ? "text-blue-700" : "text-slate-600")}>
-                      {r.text}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </Card>
+            {/* 오늘의 리추얼 (조회/완료/생성) */}
+            <TodayRitualCard />
 
-            {/* 달력 카드 */}
+            {/* 달력 */}
             <MiniCalendar />
           </div>
         </aside>
       </main>
 
-{/* 하단 CTA (중앙 오른쪽 쪽에 위치) */}
-<div className="relative z-10 w-full max-w-[1280px] mx-auto px-8">
-  <div className="flex justify-center">
-    <div className="translate-x-[10px] pb-8">
-      <Link
-        to="/steps"
-        className="
-          inline-flex items-center gap-3
-          rounded-full px-6 py-3
-          bg-white text-blue-600
-          border border-blue-200
-          shadow-[0_10px_26px_rgba(30,64,175,0.20)]
-          hover:bg-blue-50 hover:shadow-[0_12px_30px_rgba(30,64,175,0.25)]
-          transition-colors
-        "
-      >
-        <PenIcon className="w-4 h-4" />
-        <span className="text-[14px] font-medium">오늘의 리추얼 받기</span>
-        <span className="ml-1 text-[16px]">»»</span>
-      </Link>
-    </div>
-  </div>
-</div>
+      {/* 하단 CTA */}
+      <div className="relative z-10 w-full max-w-[1280px] mx-auto px-8">
+        <div className="flex justify-center">
+          <div className="translate-x-[10px] pb-8">
+            <Link
+              to="/steps"
+              className="inline-flex items-center gap-3 rounded-full px-6 py-3 bg-white text-blue-600 border border-blue-200 shadow-[0_10px_26px_rgba(30,64,175,0.20)] hover:bg-blue-50 hover:shadow-[0_12px_30px_rgba(30,64,175,0.25)] transition-colors"
+            >
+              <PenIcon className="w-4 h-4" />
+              <span className="text-[14px] font-medium">오늘의 리추얼 받기</span>
+              <span className="ml-1 text-[16px]">»»</span>
+            </Link>
+          </div>
+        </div>
+      </div>
 
-
-      {/* 좌하단 잎 장식 */}
+      {/* 좌하단 장식 */}
       <svg
         viewBox="0 0 200 120"
         className="hidden sm:block absolute left-16 bottom-6 w-40 h-28 text-blue-200"
@@ -264,7 +701,7 @@ export default function Dashboard() {
       >
         <path d="M90 120h20c0-30-10-45-10-45s-10 15-10 45z" />
         <path d="M80 105c-8 0-25-4-35-10 14-14 41-11 41-11s-3 21-6 21z" />
-        <path d="M120 105c8 0 25-4 35-10-14-14-41-11-41-11s3 21 6 21z" />
+        <path d="M120 105c8 0 25-4 35-10-14-14 41-11 41-11s3 21 6 21z" />
       </svg>
     </div>
   );
