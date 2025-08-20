@@ -1,10 +1,29 @@
 // src/pages/StartPage.jsx
+import authStore from '../store/authStore';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+
 export default function StartPage() {
+  const { user, isAuthenticated, logout } = authStore();
+  const navigate = useNavigate();
   return (
     <div className="relative min-h-screen overflow-hidden flex items-center justify-center">
       {/* 배경 그라데이션 (좌상단 → 우하단) */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#eef4ff] via-[#cfe0ff] to-[#e9f0ff]" />
 
+      {/* 로그인 상태 표시 */}
+      {isAuthenticated && (
+        <div className="absolute top-4 right-4 z-20 flex items-center gap-4 bg-white rounded-full px-4 py-2 shadow-lg">
+          <span className="text-sm text-gray-700">안녕하세요, {user?.nickname}님</span>
+          <button
+            onClick={logout}
+            className="text-sm text-red-500 hover:text-red-700 font-medium"
+          >
+            로그아웃
+          </button>
+        </div>
+      )}
+      
       {/* 중앙 콘텐츠 */}
       <div className="relative z-10 flex flex-col items-center text-center px-6">
         {/* 로고 + 타이틀 */}
@@ -30,16 +49,22 @@ export default function StartPage() {
           <span className="font-medium">‘너는 혼자가 아니야’</span>라는 가장 선명한 메아리
         </p>
 
-        {/* 시작하기 버튼 */}
+        {/* 시작하기/대시보드 버튼 */}
         <button
           type="button"
-          onClick={() => (window.location.href = "/login")} // 이동 경로 변경 가능
+          onClick={() => {
+            if (isAuthenticated) {
+              navigate('/dashboard');
+            } else {
+              navigate('/login');
+            }
+          }}
           className="rounded-full bg-white text-[#1e40af] font-semibold px-8 py-3
                      shadow-[0_8px_24px_rgba(30,64,175,0.25)]
                      hover:shadow-[0_12px_32px_rgba(30,64,175,0.32)]
                      transition focus:outline-none focus:ring-2 focus:ring-white/70"
         >
-          시작하기
+          {isAuthenticated ? '대시보드로 이동' : '시작하기'}
         </button>
       </div>
 

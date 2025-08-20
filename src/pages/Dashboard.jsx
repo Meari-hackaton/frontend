@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import authStore from '../store/authStore';
 
 /* ─────────────────────────────────  공통 작은 컴포넌트  ───────────────────────────────── */
 function StatPill({ icon, label, value, unit }) {
@@ -144,7 +145,8 @@ function MiniCalendar() {
 
 /* ─────────────────────────────────  메인 페이지  ───────────────────────────────── */
 export default function Dashboard() {
-  const username = "000님";
+  const { user, isAuthenticated, logout } = authStore();
+  const username = user?.nickname || "사용자님";
   const rituals = [
     { text: "청년 창업 아이디어 피칭데이 참여", done: false },
     { text: "새로운 실로 10분 산책하기", done: true },
@@ -156,15 +158,24 @@ export default function Dashboard() {
       {/* 배경 (큰 그라데이션, 중앙이 비어 보이게) */}
       <div className="absolute inset-0 bg-[radial-gradient(1200px_700px_at_48%_55%,rgba(147,197,253,0.46),transparent_60%)]" />
 
-      {/* 상단바(오른쪽 로그인) */}
+      {/* 상단바(오른쪽 로그인/로그아웃) */}
       <header className="relative z-10 flex items-center justify-end gap-3 w-full max-w-[1280px] mx-auto px-8 pt-7">
         <div className="text-slate-500 text-sm">{username}</div>
-        <Link
-          to="/login"
-          className="rounded-full bg-blue-600 text-white px-5 py-2 text-sm shadow-[0_10px_24px_rgba(30,64,175,0.28)] hover:brightness-110"
-        >
-          로그인
-        </Link>
+        {isAuthenticated ? (
+          <button
+            onClick={logout}
+            className="rounded-full bg-red-500 text-white px-5 py-2 text-sm shadow-[0_10px_24px_rgba(220,38,38,0.28)] hover:brightness-110"
+          >
+            로그아웃
+          </button>
+        ) : (
+          <Link
+            to="/login"
+            className="rounded-full bg-blue-600 text-white px-5 py-2 text-sm shadow-[0_10px_24px_rgba(30,64,175,0.28)] hover:brightness-110"
+          >
+            로그인
+          </Link>
+        )}
       </header>
 
       {/* 본문 레이아웃: 왼쪽 칩, 오른쪽 고정 컬럼 */}

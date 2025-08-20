@@ -1,6 +1,7 @@
 // src/App.jsx
 import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import authStore from "./store/authStore";
 
 // components
 import TopBar from "./components/TopBar.jsx";
@@ -18,11 +19,11 @@ import InfoConnect from "./pages/Connect/InfoConnect.jsx";
 import ExperienceConnect from "./pages/Connect/ExperienceConnect.jsx";
 import SupportConnect from "./pages/Connect/SupportConnect.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
+import DashboardAuth from "./pages/DashboardAuth.jsx";
 /** 카드(공감/성찰/성장) 화면 – 루트("/")에서 사용 */
 
-console.log("ENV:", import.meta.env);
-
-function Cardspage() {
+// 카드 페이지 컴포넌트 (현재 사용 안함)
+function CardsPageWithTabs() {
   const location = useLocation();
   const [step, setStep] = useState(1); // 1: 공감, 2: 성찰, 3: 성장
 
@@ -49,7 +50,35 @@ function Cardspage() {
   );
 }
 
+// Protected Route 컴포넌트
+function ProtectedRoute({ children }) {
+  const { isAuthenticated, loading, checkAuth } = authStore();
+  
+  useEffect(() => {
+    if (!isAuthenticated && !loading) {
+      checkAuth();
+    }
+  }, [isAuthenticated, loading, checkAuth]);
+  
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return children;
+}
+
 export default function App() {
+  const checkAuth = authStore((state) => state.checkAuth);
+  
+  // 앱 시작 시 인증 상태 확인
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+  
   return (
     <BrowserRouter>
       <Routes>
@@ -61,11 +90,33 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/steps" element={<StepsWizard />} />
         <Route path="/echo" element={<EchoLanding />} />
-        <Route path="/connect/info" element={<InfoConnect />} />
-        <Route path="/connect/experience" element={<ExperienceConnect />} />
-        <Route path="/connect/support" element={<SupportConnect />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/cards" element={<CardsPage />} />
+        
+        {/* Protected Routes - 로그인 필요 */}
+        <Route path="/connect/info" element={
+          <ProtectedRoute>
+            <InfoConnect />
+          </ProtectedRoute>
+        } />
+        <Route path="/connect/experience" element={
+          <ProtectedRoute>
+            <ExperienceConnect />
+          </ProtectedRoute>
+        } />
+        <Route path="/connect/support" element={
+          <ProtectedRoute>
+            <SupportConnect />
+          </ProtectedRoute>
+        } />
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/cards" element={
+          <ProtectedRoute>
+            <CardsPage />
+          </ProtectedRoute>
+        } />
 
         {/* 404 */}
         <Route path="*" element={<div style={{ padding: 40 }}>404</div>} />

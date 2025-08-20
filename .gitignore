@@ -21,3 +21,14 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Environment variables
+.env
+
+# Claude related files
+CLAUDE.md
+.claude/
+.claude-files/
+.claudeignore
+*.claude
+claude-*

@@ -1,8 +1,21 @@
 // src/pages/LoginPage.jsx
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import authStore from '../store/authStore';
+
 export default function LoginPage() {
+  const navigate = useNavigate();
+  const { isAuthenticated } = authStore();
+  
+  // 이미 로그인된 경우 대시보드로 리다이렉트
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
   const handleGoogleLogin = () => {
-    // REACT_APP_API_URL은 .env에서 설정한 백엔드 주소
-    window.location.href = `${process.env.REACT_APP_API_URL}/auth/google/callback`;
+    // 백엔드 OAuth 시작점으로 리다이렉트 (성공 후 /dashboard로 이동하도록 요청)
+    window.location.href = `${process.env.REACT_APP_API_URL}/auth/google/login?redirect_url=${encodeURIComponent('http://localhost:3000/dashboard')}`;
   };
 
   return (
