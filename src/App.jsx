@@ -18,6 +18,8 @@ import InfoConnect from "./pages/Connect/InfoConnect.jsx";
 import ExperienceConnect from "./pages/Connect/ExperienceConnect.jsx";
 import SupportConnect from "./pages/Connect/SupportConnect.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
+import Signup from "./pages/Signup"; 
+import GreetingPage from "./pages/GreetingPage.jsx";
 /** 카드(공감/성찰/성장) 화면 – 루트("/")에서 사용 */
 
 console.log("ENV:", import.meta.env);
@@ -66,7 +68,8 @@ export default function App() {
         <Route path="/connect/support" element={<SupportConnect />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/cards" element={<CardsPage />} />
-
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/greeting" element={<GreetingPage />} />
         {/* 404 */}
         <Route path="*" element={<div style={{ padding: 40 }}>404</div>} />
       </Routes>
