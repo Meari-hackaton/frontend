@@ -1,15 +1,9 @@
 // src/App.jsx
-import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import authStore from "./store/authStore";
 
-// components
-import TopBar from "./components/TopBar.jsx";
-
-// pages (각 파일은 이미 만들어 둔 걸 가정)
-import EmpathyPage from "./pages/EmpathyPage.jsx";
-import ReflectionPage from "./pages/ReflectionPage.jsx";
-import GrowthPage from "./pages/GrowthPage.jsx";
+// pages
 import LoginPage from "./pages/LoginPage.jsx";
 import StartPage from "./pages/StartPage.jsx";
 import CardsPage from "./pages/CardsPage.jsx";
@@ -19,36 +13,6 @@ import InfoConnect from "./pages/Connect/InfoConnect.jsx";
 import ExperienceConnect from "./pages/Connect/ExperienceConnect.jsx";
 import SupportConnect from "./pages/Connect/SupportConnect.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
-import DashboardAuth from "./pages/DashboardAuth.jsx";
-/** 카드(공감/성찰/성장) 화면 – 루트("/")에서 사용 */
-
-// 카드 페이지 컴포넌트 (현재 사용 안함)
-function CardsPageWithTabs() {
-  const location = useLocation();
-  const [step, setStep] = useState(1); // 1: 공감, 2: 성찰, 3: 성장
-
-  // /echo 등에서 navigate("/", { state: { step: 2 } }) 식으로 온 초기 탭 적용
-  useEffect(() => {
-    const incoming = location.state?.step;
-    if (incoming === 1 || incoming === 2 || incoming === 3) {
-      setStep(incoming);
-    }
-    // 상태를 재사용할 필요 없으면 history state를 비워도 됨(선택)
-    // window.history.replaceState({}, document.title, window.location.pathname);
-  }, [location.state]);
-
-  return (
-    <div className="min-h-screen text-slate-800">
-      <TopBar step={step} setStep={setStep} />
-      {step === 1 && <EmpathyPage />}
-      {step === 2 && <ReflectionPage />}
-      {step === 3 && <GrowthPage />}
-      <footer className="py-10 text-center text-xs text-slate-400">
-        © {new Date().getFullYear()} Echo UI
-      </footer>
-    </div>
-  );
-}
 
 // Protected Route 컴포넌트
 function ProtectedRoute({ children }) {
