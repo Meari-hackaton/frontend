@@ -11,6 +11,7 @@ import ReflectionPage from "./pages/ReflectionPage.jsx";
 import GrowthPage from "./pages/GrowthPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import StartPage from "./pages/StartPage.jsx";
+import CardsPage from "./pages/CardsPage.jsx";
 import StepsWizard from "./pages/StepsWizard.jsx";
 import EchoLanding from "./pages/EchoLanding.jsx";
 import InfoConnect from "./pages/Connect/InfoConnect.jsx";
@@ -21,7 +22,7 @@ import Dashboard from "./pages/Dashboard.jsx";
 
 console.log("ENV:", import.meta.env);
 
-function CardsPage() {
+function Cardspage() {
   const location = useLocation();
   const [step, setStep] = useState(1); // 1: 공감, 2: 성찰, 3: 성장
 
@@ -53,7 +54,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* 루트: 카드 화면 */}
-        <Route path="/" element={<CardsPage />} />
+        <Route path="/" element={<StartPage />} />
 
         {/* 시작/로그인/스텝/메아리 랜딩 */}
         <Route path="/start" element={<StartPage />} />
@@ -64,6 +65,7 @@ export default function App() {
         <Route path="/connect/experience" element={<ExperienceConnect />} />
         <Route path="/connect/support" element={<SupportConnect />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/cards" element={<CardsPage />} />
 
         {/* 404 */}
         <Route path="*" element={<div style={{ padding: 40 }}>404</div>} />

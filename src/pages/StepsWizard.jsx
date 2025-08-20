@@ -235,7 +235,7 @@ export default function StepsWizard() {
       </div>
 
       <div className="flex flex-col items-center gap-6">
-        <GlassButton onClick={() => navigate("/", { state: answers })}>
+        <GlassButton onClick={() => navigate("/echo", { state: answers })}>
           메아리 받기
         </GlassButton>
 

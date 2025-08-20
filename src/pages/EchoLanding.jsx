@@ -39,14 +39,9 @@ function GlassButton({ children, onClick, className = "" }) {
 export default function EchoLanding() {
   const navigate = useNavigate();
 
-  const go = (step) => {
-    // 카드 화면(TopBar 있는 화면)으로 이동하면서 초기 스텝 전달
-    // 루트("/")가 카드 화면이라면 아래처럼 state에 step을 넣어 보냅니다.
-    navigate("/", { state: { step } });
-    // 만약 cards 라우트를 쓰고 있다면:
-    // navigate("/cards", { state: { step } });
-  };
-
+const go = (step) => {
+  navigate(`/cards?step=${step}`);   // ✅ 쿼리스트링으로 전달 (새로고침에도 유지)
+};
   return (
     <div className="relative min-h-screen overflow-hidden">
       {/* 배경 */}
@@ -93,6 +88,7 @@ export default function EchoLanding() {
           </div>
         </section>
       </main>
+      
 
       {/* 하단 웨이브 */}
       <svg

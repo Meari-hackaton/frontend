@@ -1,48 +1,111 @@
-import StepBullets from "./StepBullets";
+// src/components/TopBar.jsx
+import { useNavigate } from "react-router-dom";
+
+function Tab({ label, active, onClick }) {
+  return (
+    <button
+      role="tab"
+      aria-selected={active}
+      tabIndex={active ? 0 : -1}
+      onClick={onClick}
+      className="flex flex-col items-center gap-2 px-2 focus:outline-none"
+    >
+      <span
+        className={
+          (active
+            ? "text-blue-600 font-semibold"
+            : "text-slate-400 hover:text-slate-600") +
+          " text-[12px] sm:text-[13px] transition"
+        }
+      >
+        {label}
+      </span>
+      <span
+        className={
+          "h-2 w-36 rounded-full transition-all " +
+          (active ? "bg-blue-500" : "bg-slate-300")
+        }
+      />
+    </button>
+  );
+}
+
+function NowPlaying() {
+  return (
+    <div className="hidden md:flex items-center gap-3 rounded-2xl bg-blue-50 p-3 shadow-sm">
+      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-200 to-sky-200" />
+      <div className="min-w-[160px]">
+        <div className="text-sm font-semibold text-slate-800">Disorder</div>
+        <div className="text-xs text-slate-500">Joy Division</div>
+        <div className="mt-2 h-1.5 w-full rounded-full bg-blue-200">
+          <div className="h-1.5 w-1/3 rounded-full bg-blue-500" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function TopBar({ step, setStep }) {
+  const navigate = useNavigate();
   const tabs = [
     { key: 1, label: "공감의 메아리" },
     { key: 2, label: "성찰의 메아리" },
     { key: 3, label: "성장의 메아리" },
   ];
+
   return (
-    <header className="w-full">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <button className="text-blue-600 hover:text-blue-700 flex items-center gap-1 text-sm">
-          <span className="text-lg">←</span> Back
-        </button>
-        <div className="hidden sm:flex items-center gap-3 text-blue-700">
-          <button className="p-1">⏮️</button>
-          <button className="p-1">⏯️</button>
-          <button className="p-1">⏭️</button>
-        </div>
-      </div>
-      <div className="max-w-4xl mx-auto px-4">
-        <nav className="flex items-center gap-2 sm:gap-6 justify-center text-sm sm:text-base">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setStep(t.key)}
-              className={
-                "relative pb-2 px-2 transition " +
-                (step === t.key ? "text-blue-700" : "text-slate-400 hover:text-slate-600")
-              }
+    <header className="w-full bg-gradient-to-b from-white to-[#f7fbff]">
+      <div className="max-w-6xl mx-auto px-4 py-4 grid grid-cols-3 items-center">
+        {/* Left: Back */}
+        <div className="flex items-center">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={3}
             >
-              {t.label}
-              <span
-                className={
-                  "absolute left-1/2 -bottom-0.5 h-0.5 -translate-x-1/2 rounded-full transition-all " +
-                  (step === t.key ? "w-16 bg-blue-500" : "w-8 bg-slate-200")
-                }
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M10 19l-7-7 7-7"
               />
-            </button>
-          ))}
+              <line x1="3" y1="12" x2="21" y2="12" />
+            </svg>
+            <span className="text-lg font-bold">Back</span>
+          </button>
+        </div>
+
+        {/* Center: Tabs */}
+        <nav
+          role="tablist"
+          aria-label="Echo steps"
+          className="flex flex-col items-center"
+        >
+          <div className="flex items-center justify-center gap-10">
+            {tabs.map((t) => (
+              <Tab
+                key={t.key}
+                label={t.label}
+                active={step === t.key}
+                onClick={() => setStep(t.key)}
+              />
+            ))}
+          </div>
         </nav>
-        <div className="mt-4 mb-2 flex justify-center">
-          <StepBullets total={3} active={step} />
+
+        {/* Right: Player */}
+        <div className="flex justify-end">
+          <NowPlaying />
         </div>
       </div>
+
+      <div className="h-6" />
     </header>
   );
 }
