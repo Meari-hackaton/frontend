@@ -60,26 +60,42 @@ function CheckIcon({ done }) {
   );
 }
 
-/* ───────────────────────────── 캘린더(달력 API 연동) ───────────────────────────── */
+/* ───────────────────────────── 캘린더───────────────────────────── */
 function MiniCalendar() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth()); // 0~11
 
-  const [daysMap, setDaysMap] = useState(() => new Map());
+  // 달력 API 데이터
+  const [daysMap, setDaysMap] = useState(() => new Map()); // 1~31 -> info(달력 API)
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // 세션 이력(해당 월)
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [sessionDays, setSessionDays] = useState(new Set()); // 1~31
+  const [monthSessions, setMonthSessions] = useState([]);    // 해당 월의 세션 목록 원본
+
+  // 모달
+  const [openModal, setOpenModal] = useState(false);
+  const [modalDateStr, setModalDateStr] = useState(""); // YYYY-MM-DD
+  const [modalRows, setModalRows] = useState([]);       // 선택 날짜의 세션들
 
   const api = axios.create({
     baseURL: import.meta?.env?.VITE_API_BASE_URL || "",
     withCredentials: true,
   });
 
+  // 공통: 날짜 문자열 추출(백엔드 필드 다양성 방어)
+  const getDateStr = (s) =>
+    s.date || s.completed_at || s.created_at || s.started_at || s.ended_at || "";
+
+  // 1) 달력 API
   const fetchCalendar = async (y, m0) => {
     try {
       setLoading(true);
       const { data } = await api.get("/api/v1/dashboard/calendar", {
-        params: { year: y, month: m0 + 1 }, // API는 1~12
+        params: { year: y, month: m0 + 1 },
       });
       const map = new Map();
       (data?.days || []).forEach((d) => {
@@ -97,11 +113,47 @@ function MiniCalendar() {
     }
   };
 
+  // 2) 세션 이력(큰 페이지 하나 받아 월만 필터)
+  const fetchSessionsForMonth = async (y, m0) => {
+    try {
+      setSessionsLoading(true);
+      const { data } = await api.get("/api/v1/history/sessions", {
+        params: { page: 1, limit: 500 }, // 필요 시 조절
+      });
+
+      const list = Array.isArray(data?.sessions) ? data.sessions : [];
+      const wantedYM = `${y}-${String(m0 + 1).padStart(2, "0")}-`;
+
+      const setDays = new Set();
+      const onlyMonth = [];
+      for (const s of list) {
+        const ds = getDateStr(s);
+        if (typeof ds === "string" && ds.startsWith(wantedYM)) {
+          const dd = Number(ds.slice(8, 10));
+          if (!Number.isNaN(dd)) {
+            setDays.add(dd);
+            onlyMonth.push(s);
+          }
+        }
+      }
+      setSessionDays(setDays);
+      setMonthSessions(onlyMonth);
+    } catch (e) {
+      console.error("세션 이력 로드 실패:", e);
+      setSessionDays(new Set());
+      setMonthSessions([]);
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchCalendar(year, month);
+    fetchSessionsForMonth(year, month);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month]);
 
+  // 달력 행/열 계산
   const { weeks, monthLabel } = useMemo(() => {
     const first = new Date(year, month, 1);
     const last = new Date(year, month + 1, 0);
@@ -132,83 +184,176 @@ function MiniCalendar() {
     } else setMonth((m) => m + 1);
   };
 
+  // 표시 우선순위: 완료 > (리추얼있음 || 세션있음) > 기본
   const dayClasses = (d) => {
     const info = daysMap.get(d);
-    if (!info) return "bg-white border border-blue-100 text-slate-600";
-    if (info.is_completed) return "bg-blue-600 text-white shadow-[0_6px_18px_rgba(30,64,175,0.25)]";
-    if (info.has_ritual) return "bg-blue-100 text-blue-700 border border-blue-200";
+    if (info?.is_completed)
+      return "bg-blue-600 text-white shadow-[0_6px_18px_rgba(30,64,175,0.25)]";
+    if (info?.has_ritual || sessionDays.has(d))
+      return "bg-blue-100 text-blue-700 border border-blue-200";
     return "bg-white border border-blue-100 text-slate-600";
   };
 
-  return (
-    <Card className="p-0 overflow-hidden w-[520px]">
-      <div className="px-8 pt-6 pb-3">
-        <div className="flex items-center justify-center gap-6 text-slate-600">
-          <button onClick={goPrev} className="text-slate-400 hover:text-slate-600">◀</button>
-          <div className="text-[15px] font-semibold">
-            {monthLabel} {loading && <span className="ml-2 text-xs text-slate-400">(불러오는 중)</span>}
-          </div>
-          <button onClick={goNext} className="text-slate-400 hover:text-slate-600">▶</button>
+  // 날짜 클릭 → 모달 오픈
+  const onClickDay = (d) => {
+    if (!d) return;
+    const ymd = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    setModalDateStr(ymd);
+
+    const rows = monthSessions.filter((s) => {
+      const ds = getDateStr(s);
+      return typeof ds === "string" && ds.startsWith(ymd);
+    });
+
+    setModalRows(rows);
+    setOpenModal(true);
+  };
+
+  // 세션 행 표시용 헬퍼
+  const renderRow = (s, idx) => {
+    const title = s.title || s.name || "(제목 없음)";
+    const type = s.type || s.category || "";
+    const date = getDateStr(s) || "";
+    const duration = s.duration_minutes ?? s.duration ?? "-";
+    const status = s.status || (s.is_completed ? "completed" : "pending");
+
+    return (
+      <li key={s.id ?? idx} className="flex items-center justify-between py-2 border-t border-blue-50 first:border-t-0">
+        <div>
+          <div className="font-medium text-slate-800">{title}</div>
+          <div className="text-xs text-slate-500">{type} · {date}</div>
         </div>
-      </div>
+        <div className="text-xs text-slate-500">
+          {duration}분 · {status}
+        </div>
+      </li>
+    );
+  };
 
-      <div className="grid grid-cols-7 text-center text-[12px] text-slate-400 px-8 pb-2">
-        {["일","월","화","수","목","금","토"].map((d) => (
-          <div key={d} className="py-1">{d}</div>
-        ))}
-      </div>
+  return (
+    <>
+      <Card className="p-0 overflow-hidden w-[520px]">
+        {/* 헤더 */}
+        <div className="px-8 pt-6 pb-3">
+          <div className="flex items-center justify-center gap-6 text-slate-600">
+            <button onClick={goPrev} className="text-slate-400 hover:text-slate-600">◀</button>
+            <div className="text-[15px] font-semibold">
+              {monthLabel}{" "}
+              {(loading || sessionsLoading) && (
+                <span className="ml-2 text-xs text-slate-400">(불러오는 중)</span>
+              )}
+            </div>
+            <button onClick={goNext} className="text-slate-400 hover:text-slate-600">▶</button>
+          </div>
+        </div>
 
-      <div className="grid grid-cols-7 gap-3 px-8 pb-4">
-        {weeks.map((row, i) =>
-          row.map((d, j) => {
-            const info = d ? daysMap.get(d) : null;
-            return (
-              <div key={`${i}-${j}`} className="h-10 flex items-center justify-center">
-                {d ? (
-                  <div
-                    title={
-                      info
-                        ? `${d}일 • ${info.is_completed ? "완료" : info.has_ritual ? "리추얼 있음" : "리추얼 없음"}${
-                            info.ritual_title ? ` • ${info.ritual_title}` : ""
-                          }`
-                        : `${d}일`
-                    }
-                    className={
-                      "w-10 h-10 flex items-center justify-center rounded-full text-[13px] transition-all " +
-                      dayClasses(d)
-                    }
-                  >
-                    {d}
-                  </div>
-                ) : (
-                  <div className="w-10 h-10" />
-                )}
+        {/* 요일 */}
+        <div className="grid grid-cols-7 text-center text-[12px] text-slate-400 px-8 pb-2">
+          {["일","월","화","수","목","금","토"].map((d) => (
+            <div key={d} className="py-1">{d}</div>
+          ))}
+        </div>
+
+        {/* 날짜 */}
+        <div className="grid grid-cols-7 gap-3 px-8 pb-4">
+          {weeks.map((row, i) =>
+            row.map((d, j) => {
+              const info = d ? daysMap.get(d) : null;
+              const title = info
+                ? `${d}일 • ${
+                    info.is_completed ? "완료"
+                    : (info.has_ritual || sessionDays.has(d)) ? "기록 있음"
+                    : "기록 없음"
+                  }${info.ritual_title ? ` • ${info.ritual_title}` : ""}`
+                : d ? `${d}일` : "";
+
+              return (
+                <div key={`${i}-${j}`} className="h-10 flex items-center justify-center">
+                  {d ? (
+                    <button
+                      onClick={() => onClickDay(d)}
+                      title={title}
+                      className={
+                        "w-10 h-10 flex items-center justify-center rounded-full text-[13px] transition-all " +
+                        dayClasses(d)
+                      }
+                    >
+                      {d}
+                    </button>
+                  ) : (
+                    <div className="w-10 h-10" />
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* 요약 */}
+        <div className="px-8 pb-6">
+          {summary ? (
+            <div className="grid grid-cols-3 gap-3 text-[12px] text-slate-600">
+              <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+                완료일수<br/><span className="text-[13px] font-semibold text-blue-700">{summary.completed_days}</span>
               </div>
-            );
-          })
-        )}
-      </div>
+              <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+                달성률<br/><span className="text-[13px] font-semibold text-blue-700">{summary.completion_rate}%</span>
+              </div>
+              <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+                연속일수<br/><span className="text-[13px] font-semibold text-blue-700">{summary.current_streak}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-[12px] text-slate-400">요약 정보를 불러오지 못했어요.</div>
+          )}
+        </div>
+      </Card>
 
-      <div className="px-8 pb-6">
-        {summary ? (
-          <div className="grid grid-cols-3 gap-3 text-[12px] text-slate-600">
-            <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
-              완료일수<br/><span className="text-[13px] font-semibold text-blue-700">{summary.completed_days}</span>
+      {/* ───────── 모달 ───────── */}
+      {openModal && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+          {/* backdrop */}
+          <button
+            className="absolute inset-0 bg-slate-900/40"
+            onClick={() => setOpenModal(false)}
+            aria-label="close modal backdrop"
+          />
+          {/* dialog */}
+          <div className="relative w-full max-w-[560px] mx-3 sm:mx-0 rounded-2xl bg-white border border-blue-100 shadow-[0_24px_60px_rgba(30,64,175,0.25)] p-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-[15px] font-semibold text-slate-800">{modalDateStr} 기록</div>
+              <button
+                onClick={() => setOpenModal(false)}
+                className="text-slate-400 hover:text-slate-600 text-lg"
+                aria-label="close modal"
+              >
+                ×
+              </button>
             </div>
-            <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
-              달성률<br/><span className="text-[13px] font-semibold text-blue-700">{summary.completion_rate}%</span>
-            </div>
-            <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
-              연속일수<br/><span className="text-[13px] font-semibold text-blue-700">{summary.current_streak}</span>
+
+            {modalRows.length === 0 ? (
+              <div className="text-[13px] text-slate-500">이 날짜에는 기록이 없어요.</div>
+            ) : (
+              <ul className="text-[13px]">
+                {modalRows.map((s, idx) => renderRow(s, idx))}
+              </ul>
+            )}
+
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={() => setOpenModal(false)}
+                className="rounded-full border border-slate-200 px-4 py-2 text-[13px] text-slate-600 hover:bg-slate-50"
+              >
+                닫기
+              </button>
             </div>
           </div>
-        ) : (
-          <div className="text-[12px] text-slate-400">요약 정보를 불러오지 못했어요.</div>
-        )}
-      </div>
-    </Card>
+        </div>
+      )}
+    </>
   );
 }
+
 
 /* ───────────────────────────── 오늘의 리추얼 카드 (조회/완료/생성) ───────────────────────────── */
 function TodayRitualCard() {
