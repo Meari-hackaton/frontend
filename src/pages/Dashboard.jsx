@@ -60,6 +60,132 @@ function CheckIcon({ done }) {
   );
 }
 
+
+function RitualStatsCard({ year: controlledYear, month: controlledMonth }) {
+  // year/month가 props로 주어지면 그걸 쓰고, 아니면 오늘로
+  const now = new Date();
+  const year = controlledYear ?? now.getFullYear();
+  const month = controlledMonth ?? now.getMonth() + 1; // 1~12
+
+  const api = axios.create({
+    baseURL: import.meta?.env?.VITE_API_BASE_URL || "",
+    withCredentials: true,
+  });
+
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(null);
+
+  const fetchStats = async (y, m) => {
+    try {
+      setLoading(true);
+      const { data } = await api.get("/api/v1/history/rituals/stats", {
+        params: { year: y, month: m },
+      });
+      setStats(data || null);
+      setErr(null);
+    } catch (e) {
+      console.error(e);
+      setErr(e);
+      setStats(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats(year, month);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, month]);
+
+  const monthly = stats?.monthly || {};
+  const weekly = Array.isArray(stats?.weekly) ? stats.weekly : [];
+
+  // 안전한 라벨/수치 추출 (백엔드 필드명이 바뀌어도 최대한 보여주기)
+  const getRate = (obj, completedKey = "completed", totalKey = "total") => {
+    const rate =
+      obj.completion_rate ??
+      obj.rate ??
+      (obj[completedKey] != null && obj[totalKey] ? Math.round((obj[completedKey] / obj[totalKey]) * 100) : null);
+    return rate;
+  };
+
+  return (
+    <Card className="w-[520px]">
+      <div className="flex items-center justify-between mb-3">
+        <div className="font-semibold text-slate-700">
+          리추얼 통계 <span className="text-slate-400 text-sm">{year}년 {month}월</span>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="space-y-2 animate-pulse">
+          <div className="h-4 w-44 bg-slate-200 rounded" />
+          <div className="h-4 w-56 bg-slate-200 rounded" />
+          <div className="h-4 w-40 bg-slate-200 rounded" />
+        </div>
+      ) : err ? (
+        <div className="text-[13px] text-red-500">통계를 불러오지 못했습니다.</div>
+      ) : !stats ? (
+        <div className="text-[13px] text-slate-400">데이터가 없습니다.</div>
+      ) : (
+        <>
+          {/* 월 통계 요약 */}
+          <div className="grid grid-cols-3 gap-3 text-[12px] text-slate-600 mb-4">
+            <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+              완료일수<br/>
+              <span className="text-[13px] font-semibold text-blue-700">
+                {monthly.completed_days ?? monthly.completed ?? "-"}
+              </span>
+            </div>
+            <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+              달성률<br/>
+              <span className="text-[13px] font-semibold text-blue-700">
+                {getRate(monthly, "completed_days", "total_days") ?? "-"}%
+              </span>
+            </div>
+            <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+              총 리추얼<br/>
+              <span className="text-[13px] font-semibold text-blue-700">
+                {monthly.total_rituals ?? monthly.count ?? "-"}
+              </span>
+            </div>
+          </div>
+
+          {/* 주간 분포 */}
+          <div>
+            <div className="text-[13px] font-medium text-slate-700 mb-2">주간 통계</div>
+            {weekly.length === 0 ? (
+              <div className="text-[12px] text-slate-400">주간 데이터가 없습니다.</div>
+            ) : (
+              <ul className="divide-y divide-blue-50 rounded-2xl border border-blue-100 bg-white">
+                {weekly.map((w, i) => {
+                  const label =
+                    w.week_label ||
+                    (w.start_date && w.end_date ? `${w.start_date} ~ ${w.end_date}` : `W${i + 1}`);
+                  const completed = w.completed_days ?? w.completed ?? w.count ?? 0;
+                  const total = w.total_days ?? w.total ?? null;
+                  const rate = getRate(w, "completed_days", "total_days");
+
+                  return (
+                    <li key={w.id ?? i} className="flex items-center justify-between px-3 py-2">
+                      <div className="text-[13px] text-slate-700">{label}</div>
+                      <div className="text-[12px] text-slate-500">
+                        {total != null ? `${completed}/${total}` : completed} · {rate ?? "-"}%
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
+
 /* ───────────────────────────── 캘린더───────────────────────────── */
 function MiniCalendar() {
   const today = new Date();
@@ -817,6 +943,8 @@ export default function Dashboard() {
 
             {/* 달력 */}
             <MiniCalendar />
+            {/*통계*/}
+            <RitualStatsCard />
           </div>
         </aside>
       </main>
@@ -849,5 +977,8 @@ export default function Dashboard() {
         <path d="M120 105c8 0 25-4 35-10-14-14 41-11 41-11s3 21 6 21z" />
       </svg>
     </div>
+
+    
   );
+  
 }
