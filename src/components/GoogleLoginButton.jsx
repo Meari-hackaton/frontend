@@ -3,7 +3,8 @@ import React from "react";
 
 const GoogleLoginButton = () => {
   const handleLogin = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
+    // 백엔드 OAuth 시작점으로 리다이렉트
+    window.location.href = `${process.env.REACT_APP_API_URL}/auth/google/login`;
   };
 
   return (
