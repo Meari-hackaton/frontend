@@ -1196,24 +1196,29 @@ export default function Dashboard() {
   />
 </div>
 
-{/* 메아리 실행하기 버튼 (하단 중앙) */}
+{/* 리츄얼 받기 버튼 (하단 중앙) */}
 <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
-  <Link 
-    to="/steps" 
-    className="inline-block hover:scale-105 transition-transform"
-    onClick={() => {
-      // 새로운 메아리 세션을 위해 이전 기록 삭제
-      localStorage.removeItem('viewedEchoTypes');
-      localStorage.removeItem('viewedEchoCards');
-      sessionStorage.removeItem('meariSessionData');
-    }}
-  >
-    <img 
-      src={require('../assets/images/group4480.png')}
-      alt="오늘의 리추얼 받기"
-      className="h-[40px] w-auto drop-shadow-md"
-    />
-  </Link>
+  {todayRitual ? (
+    // 오늘 리츄얼이 이미 있는 경우
+    <div className="text-center">
+      <div className="bg-white/90 backdrop-blur-sm rounded-2xl px-6 py-4 shadow-lg border border-blue-100">
+        <p className="text-[14px] text-slate-600 mb-1">오늘의 리츄얼이 이미 있어요!</p>
+        <p className="text-[12px] text-blue-500">내일 다시 만나요 🌙</p>
+      </div>
+    </div>
+  ) : (
+    // 오늘 리츄얼이 없는 경우 - GreetingPage로 이동
+    <Link 
+      to="/greeting" 
+      className="inline-block hover:scale-105 transition-transform"
+    >
+      <img 
+        src={require('../assets/images/group4480.png')}
+        alt="오늘의 리추얼 받기"
+        className="h-[40px] w-auto drop-shadow-md"
+      />
+    </Link>
+  )}
 </div>
 
 

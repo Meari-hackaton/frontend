@@ -1,7 +1,48 @@
-import React from "react";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import meariService from "../services/meariService";
+import authStore from "../store/authStore";
 
 /** MEARI – Greeting(인사) 페이지 – 버튼 그라데이션 + 비행기 물결 끝 배치 */
 export default function GreetingPage({ onStart, onHistory }) {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const { user } = authStore();
+
+  // 리츄얼 받기 처리
+  const handleGetRitual = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // 이전 세션 데이터 확인 (페르소나 정보 등)
+      const sessionData = JSON.parse(sessionStorage.getItem('meariSessionData') || '{}');
+      
+      // growth-contents API를 context: 'ritual'로 호출
+      const response = await meariService.createGrowthContents({
+        session_id: sessionData.session_id || `ritual_${Date.now()}`,
+        context: 'ritual',  // 리츄얼 받기 모드
+        previous_policy_ids: [],
+        persona_summary: sessionData.persona?.summary || ''
+      });
+
+      console.log('리츄얼 생성 완료:', response);
+      
+      // 대시보드로 이동
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('리츄얼 생성 실패:', err);
+      setError('리츄얼을 받는데 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 대시보드로 돌아가기
+  const handleBackToDashboard = () => {
+    navigate('/dashboard');
+  };
   return (
     <div className="relative min-h-screen overflow-hidden antialiased">
       {/* 배경 */}
@@ -20,18 +61,27 @@ export default function GreetingPage({ onStart, onHistory }) {
           {/* 버튼 두 개: 파란색 그라데이션 */}
           <div className="mt-8 flex flex-col items-center gap-3">
             <button
-              onClick={onHistory}
-              className="w-[430px] max-w-[88vw] rounded-full bg-gradient-to-r from-[#d8e7ff] via-[#edf4ff] to-[#d8e7ff] px-6 py-3 text-[14px] font-medium text-[#497BFF] shadow-[0_10px_28px_rgba(82,127,255,0.25)] hover:brightness-105 active:translate-y-[1px]"
+              onClick={handleGetRitual}
+              disabled={loading}
+              className="w-[430px] max-w-[88vw] rounded-full bg-gradient-to-r from-[#d8e7ff] via-[#edf4ff] to-[#d8e7ff] px-6 py-3 text-[14px] font-medium text-[#497BFF] shadow-[0_10px_28px_rgba(82,127,255,0.25)] hover:brightness-105 active:translate-y-[1px] disabled:opacity-50"
             >
-              비슷해요, 오늘의 리추얼을 받을래요
+              {loading ? '리츄얼을 준비하고 있어요...' : '비슷해요, 오늘의 리추얼을 받을래요'}
             </button>
             <button
-              onClick={onStart}
-              className="w-[430px] max-w-[88vw] rounded-full bg-gradient-to-r from-[#d8e7ff] via-[#edf4ff] to-[#d8e7ff] px-6 py-3 text-[14px] font-medium text-[#497BFF] shadow-[0_10px_28px_rgba(82,127,255,0.25)] hover:brightness-105 active:translate-y-[1px]"
+              onClick={handleBackToDashboard}
+              disabled={loading}
+              className="w-[430px] max-w-[88vw] rounded-full bg-gradient-to-r from-[#d8e7ff] via-[#edf4ff] to-[#d8e7ff] px-6 py-3 text-[14px] font-medium text-[#497BFF] shadow-[0_10px_28px_rgba(82,127,255,0.25)] hover:brightness-105 active:translate-y-[1px] disabled:opacity-50"
             >
-              괜찮아요, 새로운 이야기를 시작할래요
+              괜찮아요, 오늘은 쉬어갈게요
             </button>
           </div>
+          
+          {/* 에러 메시지 */}
+          {error && (
+            <div className="mt-4 text-red-500 text-sm text-center">
+              {error}
+            </div>
+          )}
         </div>
       </section>
 
