@@ -17,6 +17,7 @@ export default function GrowthPage({ sessionData }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hasLoaded, setHasLoaded] = useState(false); // 이미 로드했는지 추적
+  const [lastLoadDate, setLastLoadDate] = useState(null); // 마지막 로드 날짜
 
   // 성장 콘텐츠 API 호출
   useEffect(() => {
@@ -27,8 +28,9 @@ export default function GrowthPage({ sessionData }) {
         return;
       }
 
-      // 이미 데이터를 불러왔으면 스킵
-      if (hasLoaded && growthContents) {
+      // 오늘 이미 데이터를 불러왔으면 스킵
+      const today = new Date().toDateString();
+      if (hasLoaded && growthContents && lastLoadDate === today) {
         setLoading(false);
         return;
       }
@@ -61,6 +63,7 @@ export default function GrowthPage({ sessionData }) {
         console.log('Setting growth contents:', contents);
         setGrowthContents(contents);
         setHasLoaded(true); // 로드 완료 표시
+        setLastLoadDate(new Date().toDateString()); // 오늘 날짜 저장
         setLoading(false);
       } catch (err) {
         console.error('Failed to fetch growth contents:', err);

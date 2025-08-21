@@ -60,12 +60,214 @@ function CheckIcon({ done }) {
   );
 }
 
-/* ─────────────────────────────────  미니 캘린더  ───────────────────────────────── */
+function RitualStatsCard({ year: controlledYear, month: controlledMonth }) {
+  // year/month가 props로 주어지면 그걸 쓰고, 아니면 오늘로
+  const now = new Date();
+  const year = controlledYear ?? now.getFullYear();
+  const month = controlledMonth ?? now.getMonth() + 1; // 1~12
+
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(null);
+
+  const fetchStats = async (y, m) => {
+    try {
+      setLoading(true);
+      // 통계 API가 없다면 기본값으로 처리
+      const data = {
+        monthly: { completed_days: 0, total_days: 30, completion_rate: 0, total_rituals: 0 },
+        weekly: []
+      };
+      setStats(data || null);
+      setErr(null);
+    } catch (e) {
+      console.error(e);
+      setErr(e);
+      setStats(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats(year, month);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, month]);
+
+  const monthly = stats?.monthly || {};
+  const weekly = Array.isArray(stats?.weekly) ? stats.weekly : [];
+
+  // 안전한 라벨/수치 추출 (백엔드 필드명이 바뀌어도 최대한 보여주기)
+  const getRate = (obj, completedKey = "completed", totalKey = "total") => {
+    const rate =
+      obj.completion_rate ??
+      obj.rate ??
+      (obj[completedKey] != null && obj[totalKey] ? Math.round((obj[completedKey] / obj[totalKey]) * 100) : null);
+    return rate;
+  };
+
+  return (
+    <Card className="w-[520px]">
+      <div className="flex items-center justify-between mb-3">
+        <div className="font-semibold text-slate-700">
+          리추얼 통계 <span className="text-slate-400 text-sm">{year}년 {month}월</span>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="space-y-2 animate-pulse">
+          <div className="h-4 w-44 bg-slate-200 rounded" />
+          <div className="h-4 w-56 bg-slate-200 rounded" />
+          <div className="h-4 w-40 bg-slate-200 rounded" />
+        </div>
+      ) : err ? (
+        <div className="text-[13px] text-red-500">통계를 불러오지 못했습니다.</div>
+      ) : !stats ? (
+        <div className="text-[13px] text-slate-400">데이터가 없습니다.</div>
+      ) : (
+        <>
+          {/* 월 통계 요약 */}
+          <div className="grid grid-cols-3 gap-3 text-[12px] text-slate-600 mb-4">
+            <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+              완료일수<br/>
+              <span className="text-[13px] font-semibold text-blue-700">
+                {monthly.completed_days ?? monthly.completed ?? "-"}
+              </span>
+            </div>
+            <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+              달성률<br/>
+              <span className="text-[13px] font-semibold text-blue-700">
+                {getRate(monthly, "completed_days", "total_days") ?? "-"}%
+              </span>
+            </div>
+            <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+              총 리추얼<br/>
+              <span className="text-[13px] font-semibold text-blue-700">
+                {monthly.total_rituals ?? monthly.count ?? "-"}
+              </span>
+            </div>
+          </div>
+
+          {/* 주간 분포 */}
+          <div>
+            <div className="text-[13px] font-medium text-slate-700 mb-2">주간 통계</div>
+            {weekly.length === 0 ? (
+              <div className="text-[12px] text-slate-400">주간 데이터가 없습니다.</div>
+            ) : (
+              <ul className="divide-y divide-blue-50 rounded-2xl border border-blue-100 bg-white">
+                {weekly.map((w, i) => {
+                  const label =
+                    w.week_label ||
+                    (w.start_date && w.end_date ? `${w.start_date} ~ ${w.end_date}` : `W${i + 1}`);
+                  const completed = w.completed_days ?? w.completed ?? w.count ?? 0;
+                  const total = w.total_days ?? w.total ?? null;
+                  const rate = getRate(w, "completed_days", "total_days");
+
+                  return (
+                    <li key={w.id ?? i} className="flex items-center justify-between px-3 py-2">
+                      <div className="text-[13px] text-slate-700">{label}</div>
+                      <div className="text-[12px] text-slate-500">
+                        {total != null ? `${completed}/${total}` : completed} · {rate ?? "-"}%
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
+
+/* ───────────────────────────── 캘린더───────────────────────────── */
 function MiniCalendar() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth()); // 0~11
 
+  // 달력 API 데이터
+  const [daysMap, setDaysMap] = useState(() => new Map()); // 1~31 -> info(달력 API)
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // 세션 이력(해당 월)
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [sessionDays, setSessionDays] = useState(new Set()); // 1~31
+  const [monthSessions, setMonthSessions] = useState([]);    // 해당 월의 세션 목록 원본
+
+  // 모달
+  const [openModal, setOpenModal] = useState(false);
+  const [modalDateStr, setModalDateStr] = useState(""); // YYYY-MM-DD
+  const [modalRows, setModalRows] = useState([]);       // 선택 날짜의 세션들
+
+  // 공통: 날짜 문자열 추출(백엔드 필드 다양성 방어)
+  const getDateStr = (s) =>
+    s.date || s.completed_at || s.created_at || s.started_at || s.ended_at || "";
+
+  // 1) 달력 API
+  const fetchCalendar = async (y, m0) => {
+    try {
+      setLoading(true);
+      const data = await meariService.getCalendar(y, m0 + 1);
+      const map = new Map();
+      (data?.days || []).forEach((d) => {
+        const dd = Number(d.date?.split("-")?.[2]);
+        if (!Number.isNaN(dd)) map.set(dd, d);
+      });
+      setDaysMap(map);
+      setSummary(data?.summary || null);
+    } catch (e) {
+      console.error("달력 데이터 로드 실패:", e);
+      setDaysMap(new Map());
+      setSummary(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2) 세션 이력(큰 페이지 하나 받아 월만 필터)
+  const fetchSessionsForMonth = async (y, m0) => {
+    try {
+      setSessionsLoading(true);
+      // history API가 없다면 빈 배열로 처리
+      const data = { sessions: [] };
+
+      const list = Array.isArray(data?.sessions) ? data.sessions : [];
+      const wantedYM = `${y}-${String(m0 + 1).padStart(2, "0")}-`;
+
+      const setDays = new Set();
+      const onlyMonth = [];
+      for (const s of list) {
+        const ds = getDateStr(s);
+        if (typeof ds === "string" && ds.startsWith(wantedYM)) {
+          const dd = Number(ds.slice(8, 10));
+          if (!Number.isNaN(dd)) {
+            setDays.add(dd);
+            onlyMonth.push(s);
+          }
+        }
+      }
+      setSessionDays(setDays);
+      setMonthSessions(onlyMonth);
+    } catch (e) {
+      console.error("세션 이력 로드 실패:", e);
+      setSessionDays(new Set());
+      setMonthSessions([]);
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCalendar(year, month);
+    fetchSessionsForMonth(year, month);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, month]);
+
+  // 달력 행/열 계산
   const { weeks, monthLabel } = useMemo(() => {
     const first = new Date(year, month, 1);
     const last = new Date(year, month + 1, 0);
@@ -97,54 +299,459 @@ function MiniCalendar() {
     } else setMonth((m) => m + 1);
   };
 
-  const marks = new Set([4,5,6,7,8,9,10,11,12,13,15,16,17]); // 데모 표시
+  // 표시 우선순위: 완료 > (리추얼있음 || 세션있음) > 기본
+  const dayClasses = (d) => {
+    const info = daysMap.get(d);
+    if (info?.is_completed)
+      return "bg-blue-600 text-white shadow-[0_6px_18px_rgba(30,64,175,0.25)]";
+    if (info?.has_ritual || sessionDays.has(d))
+      return "bg-blue-100 text-blue-700 border border-blue-200";
+    return "bg-white border border-blue-100 text-slate-600";
+  };
 
-  return (
-    <Card className="p-0 overflow-hidden w-[520px]">
-      {/* 헤더 */}
-      <div className="px-8 pt-6 pb-3">
-        <div className="flex items-center justify-center gap-6 text-slate-600">
-          <button onClick={goPrev} className="text-slate-400 hover:text-slate-600">◀</button>
-          <div className="text-[15px] font-semibold">{monthLabel}</div>
-          <button onClick={goNext} className="text-slate-400 hover:text-slate-600">▶</button>
+  // 날짜 클릭 → 모달 오픈
+  const onClickDay = (d) => {
+    if (!d) return;
+    const ymd = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    setModalDateStr(ymd);
+
+    const rows = monthSessions.filter((s) => {
+      const ds = getDateStr(s);
+      return typeof ds === "string" && ds.startsWith(ymd);
+    });
+
+    setModalRows(rows);
+    setOpenModal(true);
+  };
+
+  // 세션 행 표시용 헬퍼
+  const renderRow = (s, idx) => {
+    const title = s.title || s.name || "(제목 없음)";
+    const type = s.type || s.category || "";
+    const date = getDateStr(s) || "";
+    const duration = s.duration_minutes ?? s.duration ?? "-";
+    const status = s.status || (s.is_completed ? "completed" : "pending");
+
+    return (
+      <li key={s.id ?? idx} className="flex items-center justify-between py-2 border-t border-blue-50 first:border-t-0">
+        <div>
+          <div className="font-medium text-slate-800">{title}</div>
+          <div className="text-xs text-slate-500">{type} · {date}</div>
         </div>
-      </div>
-
-      {/* 요일 */}
-      <div className="grid grid-cols-7 text-center text-[12px] text-slate-400 px-8 pb-2">
-        {["일","월","화","수","목","금","토"].map((d) => (
-          <div key={d} className="py-1">{d}</div>
-        ))}
-      </div>
-
-      {/* 날짜 */}
-      <div className="grid grid-cols-7 gap-3 px-8 pb-8">
-        {weeks.map((row, i) => (
-          row.map((d, j) => (
-            <div key={`${i}-${j}`} className="h-10 flex items-center justify-center">
-              {d ? (
-                <div
-                  className={
-                    "w-10 h-10 flex items-center justify-center rounded-full text-[13px] " +
-                    (marks.has(d)
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-white border border-blue-100 text-slate-600")
-                  }
-                >
-                  {d}
-                </div>
-              ) : (
-                <div className="w-10 h-10" />
+        <div className="text-xs text-slate-500">
+          {duration}분 · {status}
+        </div>
+      </li>
+    );
+  };
+  return (
+    <>
+      <Card className="p-0 overflow-hidden w-[520px]">
+        {/* 헤더 */}
+        <div className="px-8 pt-6 pb-3">
+          <div className="flex items-center justify-center gap-6 text-slate-600">
+            <button onClick={goPrev} className="text-slate-400 hover:text-slate-600">◀</button>
+            <div className="text-[15px] font-semibold">
+              {monthLabel}{" "}
+              {(loading || sessionsLoading) && (
+                <span className="ml-2 text-xs text-slate-400">(불러오는 중)</span>
               )}
             </div>
-          ))
-        ))}
+            <button onClick={goNext} className="text-slate-400 hover:text-slate-600">▶</button>
+          </div>
+        </div>
+
+        {/* 요일 */}
+        <div className="grid grid-cols-7 text-center text-[12px] text-slate-400 px-8 pb-2">
+          {["일","월","화","수","목","금","토"].map((d) => (
+            <div key={d} className="py-1">{d}</div>
+          ))}
+        </div>
+
+        {/* 날짜 */}
+        <div className="grid grid-cols-7 gap-3 px-8 pb-4">
+          {weeks.map((row, i) =>
+            row.map((d, j) => {
+              const info = d ? daysMap.get(d) : null;
+              const title = info
+                ? `${d}일 • ${
+                    info.is_completed ? "완료"
+                    : (info.has_ritual || sessionDays.has(d)) ? "기록 있음"
+                    : "기록 없음"
+                  }${info.ritual_title ? ` • ${info.ritual_title}` : ""}`
+                : d ? `${d}일` : "";
+
+              return (
+                <div key={`${i}-${j}`} className="h-10 flex items-center justify-center">
+                  {d ? (
+                    <button
+                      onClick={() => onClickDay(d)}
+                      title={title}
+                      className={
+                        "w-10 h-10 flex items-center justify-center rounded-full text-[13px] transition-all " +
+                        dayClasses(d)
+                      }
+                    >
+                      {d}
+                    </button>
+                  ) : (
+                    <div className="w-10 h-10" />
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* 요약 */}
+        <div className="px-8 pb-6">
+          {summary ? (
+            <div className="grid grid-cols-3 gap-3 text-[12px] text-slate-600">
+              <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+                완료일수<br/><span className="text-[13px] font-semibold text-blue-700">{summary.completed_days}</span>
+              </div>
+              <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+                달성률<br/><span className="text-[13px] font-semibold text-blue-700">{summary.completion_rate}%</span>
+              </div>
+              <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+                연속일수<br/><span className="text-[13px] font-semibold text-blue-700">{summary.current_streak}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-[12px] text-slate-400">요약 정보를 불러오지 못했어요.</div>
+          )}
+        </div>
+      </Card>
+
+      {/* ───────── 모달 ───────── */}
+      {openModal && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+          {/* backdrop */}
+          <button
+            className="absolute inset-0 bg-slate-900/40"
+            onClick={() => setOpenModal(false)}
+            aria-label="close modal backdrop"
+          />
+          {/* dialog */}
+          <div className="relative w-full max-w-[560px] mx-3 sm:mx-0 rounded-2xl bg-white border border-blue-100 shadow-[0_24px_60px_rgba(30,64,175,0.25)] p-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-[15px] font-semibold text-slate-800">{modalDateStr} 기록</div>
+              <button
+                onClick={() => setOpenModal(false)}
+                className="text-slate-400 hover:text-slate-600 text-lg"
+                aria-label="close modal"
+              >
+                ×
+              </button>
+            </div>
+
+            {modalRows.length === 0 ? (
+              <div className="text-[13px] text-slate-500">이 날짜에는 기록이 없어요.</div>
+            ) : (
+              <ul className="text-[13px]">
+                {modalRows.map((s, idx) => renderRow(s, idx))}
+              </ul>
+            )}
+
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={() => setOpenModal(false)}
+                className="rounded-full border border-slate-200 px-4 py-2 text-[13px] text-slate-600 hover:bg-slate-50"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ───────────────────────────── 오늘의 리추얼 카드 (조회/완료/생성) ───────────────────────────── */
+function TodayRitualCard() {
+  const [ritual, setRitual] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // 생성 폼 상태
+  const [openForm, setOpenForm] = useState(false);
+  const [form, setForm] = useState({
+    title: "",
+    type: "meditation",
+    duration_minutes: 10,
+    description: "",
+  });
+
+  // 완료 폼 상태
+  const [openComplete, setOpenComplete] = useState(false);
+  const [completeForm, setCompleteForm] = useState({
+    difficulty_rating: 2,
+    user_mood: "",
+    user_note: "",
+  });
+
+  const fetchToday = async () => {
+    try {
+      setLoading(true);
+      const data = await meariService.getDailyRituals();
+      setRitual(data || null);
+      setErr(null);
+      setOpenForm(!data); // 오늘 리추얼 없으면 생성 폼 열기
+    } catch (e) {
+      console.error(e);
+      setErr(e);
+      setRitual(null);
+      setOpenForm(true); // 에러 시에도 폼 열기
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchToday();
+  }, []);
+
+  const submitComplete = async (e) => {
+    e?.preventDefault?.();
+    if (!ritual?.id) return;
+    try {
+      setSubmitting(true);
+      await meariService.completeDailyRitual(ritual.id, {
+        difficulty_rating: Number(completeForm.difficulty_rating) || 0,
+        user_mood: (completeForm.user_mood || "").trim(),
+        user_note: (completeForm.user_note || "").trim(),
+      });
+      setOpenComplete(false);
+      await fetchToday();
+    } catch (e) {
+      console.error(e);
+      alert("리추얼 완료 처리에 실패했어요.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const create = async (e) => {
+    e?.preventDefault?.();
+    if (!form.title?.trim()) {
+      alert("제목을 입력해 주세요.");
+      return;
+    }
+    try {
+      setSubmitting(true);
+      const data = await meariService.createDailyRitual({
+        title: form.title.trim(),
+        type: form.type,
+        duration_minutes: Number(form.duration_minutes) || 0,
+        description: form.description?.trim() || "",
+      });
+      setRitual(data);
+      setOpenForm(false);
+    } catch (e) {
+      console.error(e);
+      alert("리추얼 생성에 실패했어요.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Card className="w-[520px]">
+      <div className="flex items-center justify-between mb-4">
+        <div className="font-semibold text-slate-700">리추얼 실천하기</div>
+
+        {ritual && !ritual.is_completed && (
+          <button
+            onClick={() => setOpenComplete(true)}
+            className="rounded-full bg-blue-600 text-white px-3 py-1.5 text-xs hover:brightness-110"
+          >
+            완료하기
+          </button>
+        )}
+        {!ritual && (
+          <button
+            onClick={() => setOpenForm((v) => !v)}
+            className="rounded-full bg-blue-600 text-white px-3 py-1.5 text-xs hover:brightness-110"
+          >
+            {openForm ? "닫기" : "리추얼 만들기"}
+          </button>
+        )}
       </div>
+
+      {loading ? (
+        <div className="h-6 w-60 bg-slate-200 rounded animate-pulse" />
+      ) : err ? (
+        <div className="text-[13px] text-red-500">오늘의 리추얼을 불러오지 못했습니다.</div>
+      ) : ritual ? (
+        <>
+          <div className="flex items-center gap-3">
+            <CheckIcon done={ritual.is_completed} />
+            <div className={"text-[14px] " + (ritual.is_completed ? "text-blue-700" : "text-slate-700")}>
+              {ritual.title}
+            </div>
+          </div>
+
+          {ritual.description && (
+            <p className="mt-2 text-[13px] text-slate-500 leading-relaxed whitespace-pre-line">
+              {ritual.description}
+            </p>
+          )}
+
+          <div className="mt-2 grid grid-cols-3 gap-2 text-[12px] text-slate-600">
+            <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+              유형<br/><span className="text-[13px] font-semibold text-blue-700">{ritual.type}</span>
+            </div>
+            <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+              난이도<br/><span className="text-[13px] font-semibold text-blue-700">{ritual.difficulty_rating ?? "-"}</span>
+            </div>
+            <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
+              소요시간<br/><span className="text-[13px] font-semibold text-blue-700">{ritual.duration_minutes ?? 0}분</span>
+            </div>
+          </div>
+
+          {ritual.is_completed && (
+            <div className="mt-2 text-[12px] text-slate-500">
+              {ritual.completed_at && <div>완료시간: {ritual.completed_at}</div>}
+              {ritual.user_mood && <div>기분: {ritual.user_mood}</div>}
+              {ritual.user_note && <div>메모: {ritual.user_note}</div>}
+            </div>
+          )}
+
+          {/* 완료 입력 폼 */}
+          {openComplete && !ritual.is_completed && (
+            <form onSubmit={submitComplete} className="mt-4 p-4 rounded-2xl border border-blue-100 bg-blue-50/40">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[12px] text-slate-500">난이도(1~5)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={5}
+                    value={completeForm.difficulty_rating}
+                    onChange={(e) =>
+                      setCompleteForm((f) => ({ ...f, difficulty_rating: e.target.value }))
+                    }
+                    className="w-full rounded-xl border border-blue-100 px-3 py-2 text-[14px]"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[12px] text-slate-500">기분</label>
+                  <input
+                    value={completeForm.user_mood}
+                    onChange={(e) => setCompleteForm((f) => ({ ...f, user_mood: e.target.value }))}
+                    placeholder="calm, energetic…"
+                    className="w-full rounded-xl border border-blue-100 px-3 py-2 text-[14px]"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <label className="text-[12px] text-slate-500">메모</label>
+                <textarea
+                  rows={3}
+                  value={completeForm.user_note}
+                  onChange={(e) => setCompleteForm((f) => ({ ...f, user_note: e.target.value }))}
+                  placeholder="명상 후 마음이 많이 편안해졌어요"
+                  className="w-full rounded-xl border border-blue-100 px-3 py-2 text-[14px]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 mt-3">
+                <button
+                  type="button"
+                  onClick={() => setOpenComplete(false)}
+                  className="rounded-full border border-slate-200 px-4 py-2 text-[13px] text-slate-600 hover:bg-slate-50"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="rounded-full bg-blue-600 text-white px-4 py-2 text-[13px] hover:brightness-110 disabled:opacity-60"
+                >
+                  {submitting ? "저장 중…" : "완료 저장"}
+                </button>
+              </div>
+            </form>
+          )}
+        </>
+      ) : openForm ? (
+        <form onSubmit={create} className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 gap-2">
+            <label className="text-[12px] text-slate-500">제목</label>
+            <input
+              value={form.title}
+              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+              placeholder="예: 10분 명상하기"
+              className="rounded-xl border border-blue-100 px-3 py-2 text-[14px] outline-none focus:ring-2 focus:ring-blue-200"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[12px] text-slate-500">유형</label>
+              <select
+                value={form.type}
+                onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+                className="w-full rounded-xl border border-blue-100 px-3 py-2 text-[14px]"
+              >
+                <option value="meditation">meditation</option>
+                <option value="exercise">exercise</option>
+                <option value="reading">reading</option>
+                <option value="writing">writing</option>
+                <option value="etc">etc</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[12px] text-slate-500">소요시간(분)</label>
+              <input
+                type="number"
+                min={0}
+                value={form.duration_minutes}
+                onChange={(e) => setForm((f) => ({ ...f, duration_minutes: e.target.value }))}
+                className="w-full rounded-xl border border-blue-100 px-3 py-2 text-[14px]"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2">
+            <label className="text-[12px] text-slate-500">설명</label>
+            <textarea
+              rows={3}
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              placeholder="조용한 곳에서 호흡에 집중하며 마음을 가라앉히세요…"
+              className="rounded-xl border border-blue-100 px-3 py-2 text-[14px] outline-none focus:ring-2 focus:ring-blue-200"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 mt-1">
+            <button
+              type="button"
+              onClick={() => setOpenForm(false)}
+              className="rounded-full border border-slate-200 px-4 py-2 text-[13px] text-slate-600 hover:bg-slate-50"
+            >
+              취소
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="rounded-full bg-blue-600 text-white px-4 py-2 text-[13px] hover:brightness-110 disabled:opacity-60"
+            >
+              {submitting ? "생성 중..." : "오늘의 리추얼 생성"}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="text-[13px] text-slate-400">오늘의 리추얼이 없습니다.</div>
+      )}
     </Card>
   );
 }
 
-/* ─────────────────────────────────  메인 페이지  ───────────────────────────────── */
+/* ───────────────────────────── 메인 페이지 ───────────────────────────── */
 export default function Dashboard() {
   const { user, isAuthenticated, logout } = authStore();
   const username = user?.nickname || "사용자님";
@@ -357,6 +964,8 @@ export default function Dashboard() {
 
             {/* 달력 카드 */}
             <MiniCalendar />
+            {/*통계*/}
+            <RitualStatsCard />
           </div>
         </aside>
       </main>
@@ -398,5 +1007,8 @@ export default function Dashboard() {
         <path d="M120 105c8 0 25-4 35-10-14-14-41-11-41-11s3 21 6 21z" />
       </svg>
     </div>
+
+    
   );
+  
 }
