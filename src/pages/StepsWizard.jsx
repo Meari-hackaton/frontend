@@ -370,7 +370,8 @@ export default function StepsWizard() {
             navigate('/echo', { 
               state: { 
                 sessionData: response,
-                answers: answers
+                answers: answers,
+                fromWizard: true  // 새로운 세션임을 표시
               } 
             });
           } catch (err) {

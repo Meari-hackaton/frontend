@@ -48,30 +48,42 @@ export default function EchoLanding() {
     // location.state 또는 sessionStorage에서 세션 데이터 가져오기
     const stateData = location.state?.sessionData;
     const storedData = sessionStorage.getItem('meariSessionData');
+    const isFromWizard = location.state?.fromWizard; // StepsWizard에서 왔는지 확인
     
     console.log('EchoLanding - location.state:', location.state);
     console.log('EchoLanding - sessionStorage:', storedData);
+    console.log('EchoLanding - isFromWizard:', isFromWizard);
     
-    // 새로운 세션 데이터가 있으면 localStorage 초기화
-    if (stateData) {
+    // StepsWizard에서 온 새로운 세션이면 localStorage 초기화
+    if (isFromWizard || stateData) {
       console.log('New session detected, clearing localStorage');
       localStorage.removeItem('viewedEchoTypes'); // 이전 기록 삭제
       setViewedTypes(new Set());
       setShowDashboardButton(false);
-      console.log('Using state sessionData:', stateData);
-      setSessionData(stateData);
+      
+      if (stateData) {
+        console.log('Using state sessionData:', stateData);
+        setSessionData(stateData);
+      } else if (storedData) {
+        console.log('Using stored sessionData:', JSON.parse(storedData));
+        setSessionData(JSON.parse(storedData));
+      }
     } else if (storedData) {
-      console.log('Using stored sessionData:', JSON.parse(storedData));
+      console.log('Existing session - restoring viewed types');
       setSessionData(JSON.parse(storedData));
       
-      // 기존 세션일 때만 이전 기록 복원
+      // 기존 세션일 때 이전 기록 복원
       const savedViewed = localStorage.getItem('viewedEchoTypes');
+      console.log('Saved viewed types:', savedViewed);
+      
       if (savedViewed) {
         const viewed = new Set(JSON.parse(savedViewed));
         setViewedTypes(viewed);
+        console.log('Restored viewed types:', [...viewed]);
         
         // 모든 타입을 봤으면 버튼 표시
         if (viewed.size === 3) {
+          console.log('All types viewed, showing dashboard button');
           setShowDashboardButton(true);
         }
       }
@@ -81,16 +93,29 @@ export default function EchoLanding() {
   }, [location]);
 
   const go = (cardType) => {
+    console.log('=== go function called ===');
+    console.log('Card type:', cardType);
+    console.log('Current viewed types:', [...viewedTypes]);
+    
     // 해당 타입을 본 것으로 표시
     const newViewedTypes = new Set(viewedTypes);
     newViewedTypes.add(cardType);
     setViewedTypes(newViewedTypes);
     
+    console.log('New viewed types:', [...newViewedTypes]);
+    
     // localStorage에 저장
-    localStorage.setItem('viewedEchoTypes', JSON.stringify([...newViewedTypes]));
+    const typesArray = [...newViewedTypes];
+    localStorage.setItem('viewedEchoTypes', JSON.stringify(typesArray));
+    console.log('Saved to localStorage:', typesArray);
+    
+    // 확인용 - 바로 다시 읽어보기
+    const savedData = localStorage.getItem('viewedEchoTypes');
+    console.log('Verified localStorage:', savedData);
     
     // 모든 타입을 봤는지 체크
     if (newViewedTypes.size === 3) {
+      console.log('All 3 types viewed! Showing dashboard button...');
       setTimeout(() => {
         setShowDashboardButton(true);
       }, 100);
