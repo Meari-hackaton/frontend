@@ -1167,7 +1167,14 @@ export default function Dashboard() {
                       style={{ width: `${dashboardData.tree.percentage}%` }}
                     />
                   </div>
-                  {dashboardData.tree.next_milestone && (
+                  {dashboardData.tree.level >= 28 ? (
+                    <Link 
+                      to="/completion"
+                      className="mt-2 block text-center text-[10px] bg-gradient-to-r from-purple-500 to-pink-500 text-white py-1 px-2 rounded-full hover:brightness-110"
+                    >
+                      🎉 28일 완주 리포트 보기
+                    </Link>
+                  ) : dashboardData.tree.next_milestone && (
                     <div className="mt-1 text-[9px] text-slate-500">
                       다음 단계까지 {dashboardData.tree.next_milestone - dashboardData.tree.level}번의 성장이 필요해요
                     </div>

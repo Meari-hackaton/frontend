@@ -324,7 +324,7 @@ export default function StepsWizard() {
       onBack={() => setStep(3)}
       title="메아리 받을 준비가 되셨나요?"
       subtitle="준비가 완료되셨다면 [메아리 받기] 버튼을 눌러주세요."
-      backgroundImage={require('../assets/images/태그 7.jpg')}
+      backgroundImage={require('../assets/images/step3.png')}
     >
       <div className="flex items-center justify-center mb-4 gap-2">
         {[answers.category, answers.detail].filter(Boolean).map((t, i) => (

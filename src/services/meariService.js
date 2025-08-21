@@ -70,7 +70,7 @@ const meariService = {
   // 일일 리츄얼 수정
   async updateDailyRitual(id, data) {
     try {
-      const response = await api.put(`/daily-rituals/${id}`, data);
+      const response = await api.put(`/api/v1/dashboard/rituals/${id}`, data);
       return response.data;
     } catch (error) {
       console.error('Failed to update daily ritual:', error);
@@ -81,7 +81,7 @@ const meariService = {
   // 일일 리츄얼 삭제
   async deleteDailyRitual(id) {
     try {
-      const response = await api.delete(`/daily-rituals/${id}`);
+      const response = await api.delete(`/api/v1/dashboard/rituals/${id}`);
       return response.data;
     } catch (error) {
       console.error('Failed to delete daily ritual:', error);
@@ -175,6 +175,28 @@ const meariService = {
       return response.data;
     } catch (error) {
       console.error('Failed to fetch diary:', error);
+      throw error;
+    }
+  },
+  
+  // 28일 완주 여부 확인
+  async checkCompletion() {
+    try {
+      const response = await api.get('/api/v1/completion/check');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to check completion:', error);
+      throw error;
+    }
+  },
+  
+  // 28일 완주 리포트 생성
+  async generateCompletionReport() {
+    try {
+      const response = await api.get('/api/v1/completion/report');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to generate completion report:', error);
       throw error;
     }
   }

@@ -93,7 +93,8 @@ const authStore = create(
         name: 'auth-storage', // localStorage에 저장될 키 이름
         partialize: (state) => ({ 
           user: state.user,
-          isAuthenticated: state.isAuthenticated 
+          isAuthenticated: state.isAuthenticated,
+          onboardingCompleted: state.onboardingCompleted
         }) // loading은 저장하지 않음
       }
     )

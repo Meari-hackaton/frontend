@@ -22,7 +22,14 @@ export default function GrowthPage({ sessionData }) {
   // 성장 콘텐츠 API 호출
   useEffect(() => {
     const fetchGrowthContents = async () => {
-      if (!sessionData?.session_id) {
+      // sessionData 전체 확인
+      console.log('Current sessionData:', sessionData);
+      console.log('SessionData type:', typeof sessionData);
+      console.log('SessionData keys:', sessionData ? Object.keys(sessionData) : 'null');
+      
+      // 세션 데이터가 없으면 스킵
+      if (!sessionData) {
+        console.error('No sessionData available');
         setError('세션 정보가 없습니다.');
         setLoading(false);
         return;
@@ -37,19 +44,34 @@ export default function GrowthPage({ sessionData }) {
 
       try {
         setLoading(true);
-        console.log('Requesting growth contents with:', {
-          session_id: sessionData.session_id,
-          context: 'initial',
-          previous_policy_ids: [],
-          persona_summary: sessionData.persona?.summary || ''
-        });
         
-        const response = await meariService.createGrowthContents({
-          session_id: sessionData.session_id,
+        // 세션 ID 찾기 - 다양한 필드 확인
+        const sessionId = sessionData.session_id || 
+                         sessionData.id || 
+                         sessionData.sessionId ||
+                         `session_${Date.now()}`;
+        
+        // persona summary 찾기 - 다양한 경로 확인
+        const personaSummary = sessionData.persona?.summary || 
+                              sessionData.summary || 
+                              sessionData.persona_summary ||
+                              sessionData.userContext ||
+                              '';
+        
+        console.log('Using session_id:', sessionId);
+        console.log('Using persona_summary:', personaSummary);
+        
+        // API 요청 데이터 구성
+        const requestData = {
+          session_id: sessionId,
           context: 'initial',
           previous_policy_ids: [],
-          persona_summary: sessionData.persona?.summary || ''
-        });
+          persona_summary: personaSummary
+        };
+        
+        console.log('Sending request to growth-contents API:', requestData);
+        
+        const response = await meariService.createGrowthContents(requestData);
         
         console.log('Growth contents response:', response);
         console.log('Response structure:', {
@@ -63,20 +85,41 @@ export default function GrowthPage({ sessionData }) {
         console.log('Setting growth contents:', contents);
         setGrowthContents(contents);
         setHasLoaded(true); // 로드 완료 표시
-        setLastLoadDate(new Date().toDateString()); // 오늘 날짜 저장
+        setLastLoadDate(today); // 오늘 날짜 저장
         setLoading(false);
       } catch (err) {
         console.error('Failed to fetch growth contents:', err);
-        setError('성장 콘텐츠를 불러오는데 실패했습니다.');
+        console.error('Error details:', {
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status,
+          headers: err.response?.headers,
+          requestData: err.config?.data
+        });
+        
+        // 더 구체적인 에러 메시지
+        let errorMessage = '성장 콘텐츠를 불러오는데 실패했습니다.';
+        if (err.response?.status === 404) {
+          errorMessage = 'API 엔드포인트를 찾을 수 없습니다.';
+        } else if (err.response?.status === 400) {
+          errorMessage = `잘못된 요청: ${err.response?.data?.message || '세션 정보를 확인해주세요.'}`;
+        } else if (err.response?.status === 422) {
+          errorMessage = `유효성 검사 실패: ${err.response?.data?.detail || '입력값을 확인해주세요.'}`;
+        } else if (err.response?.status === 500) {
+          errorMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+        }
+        
+        setError(errorMessage);
         setLoading(false);
       }
     };
 
-    // 세션 ID가 있고 아직 로드하지 않았을 때만 실행
-    if (sessionData?.session_id && !hasLoaded) {
+    // 세션 데이터가 있고 아직 로드하지 않았을 때만 실행
+    if (sessionData && !hasLoaded) {
       fetchGrowthContents();
     }
-  }, [sessionData?.session_id, hasLoaded]); // session_id와 hasLoaded를 의존성으로 사용
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionData, hasLoaded]); // sessionData 전체와 hasLoaded를 의존성으로 사용
 
   // 로딩 중일 때
   if (loading) {
