@@ -1029,8 +1029,12 @@ export default function Dashboard() {
 
       {/* 상단바 (로고 왼쪽, 로그인/로그아웃 오른쪽) */}
       <header className="relative z-10 flex items-center justify-between w-full max-w-[1280px] mx-auto px-8 pt-7">
-        {/* 메아리 로고 */}
-        <Link to="/dashboard" className="flex items-center hover:scale-110 transition-transform">
+        {/* 메아리 로고 - Echo 카드 페이지로 이동 */}
+        <Link 
+          to="/echo" 
+          className="flex items-center gap-3 hover:scale-105 transition-transform group"
+          title="메아리 카드 보기"
+        >
           <div className="bg-gradient-to-br from-sky-300 to-sky-400 rounded-full p-3 shadow-md">
             <img 
               src={require('../assets/images/meari-logo.png')}
@@ -1039,6 +1043,9 @@ export default function Dashboard() {
               style={{ filter: 'brightness(0) invert(1)' }}
             />
           </div>
+          <span className="text-sky-600 text-sm font-medium group-hover:text-sky-700">
+            메아리 다시보기
+          </span>
         </Link>
         
         {/* 사용자 정보 및 로그인/로그아웃 */}
