@@ -22,11 +22,10 @@ export default function StartPage() {
           >
             로그아웃
           </button>
-<<<<<<< HEAD
         </div>
       )}
 
-      {/* 하단 웨이브 라인과 종이비행기 */}
+      {/* 하단 웨이브 라인과 종이빔행기 */}
       <div className="absolute bottom-0 left-0 w-full">
         <img 
           src={require('../assets/images/wave-airplane.png')}
@@ -44,10 +43,7 @@ export default function StartPage() {
             alt="MEARI Logo"
             className="w-20 h-auto"
           />
-=======
->>>>>>> 5ac97a7c4ae0adce95e3f279ff6a3c3290698e1b
         </div>
-      )}
 
         {/* 서브 카피 */}
         <div className="text-center mb-12 max-w-md">
@@ -59,7 +55,7 @@ export default function StartPage() {
           </p>
         </div>
 
-        {/* 시작하기/대시보드 버튼 */>
+        {/* 시작하기/대시보드 버튼 */}
         <button
           type="button"
           onClick={() => {

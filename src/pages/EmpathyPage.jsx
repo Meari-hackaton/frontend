@@ -20,39 +20,57 @@ function Card({ children, className = "" }) {
   );
 }
 
-export default function EmpathyPage() {
-  const items = [
-    {
-      quote:
-        "매일 아침 회사에 가는 게 너무 힘들어요. 일요일 저녁이면 가슴이 답답해지고, 월요일 아침 알람 소리가 공포스러워요.",
-      date: "2024년 3월 직장인 번아웃 실태 보도",
-      sub: "이런 마음 정말 힘드시죠… 월요병이라고 가볍게 넘기기엔 너무 무거운 마음이에요.",
-    },
-    {
-      quote:
-        "퇴사하고 싶다는 생각을 하루에도 몇 번씩 해요. 하지만 다음 직장도 똑같을까 봐 무서워서 참고 있어요.",
-      date: "2024년 5월 MZ세대 직장 문화 기사",
-      sub: "떠나고 싶지만 떠날 수 없는 막막함, 갇혀있는 느낌이 들겠어요.",
-    },
-    {
-      quote:
-        "주변 사람들은 다 잘 지내는 것 같은데, 나만 이렇게 힘든가 싶어서 더 외로웠어요.",
-      date: "2024년 4월 청년 고민담 특집 기사",
-      sub: "SNS 속 행복한 모습들 사이에서 혼자만 뒤처진 것 같은 외로움… 당신만 느끼는 감정이 아니에요.",
-    },
-  ];
+export default function EmpathyPage({ sessionData }) {
+  // 세션 데이터에서 공감 카드 가져오기
+  console.log('EmpathyPage sessionData:', sessionData);
+  const empathyCard = sessionData?.cards?.empathy;
+  
+  // 세션 데이터가 있으면 사용, 없으면 기본값 사용
+  const items = empathyCard?.cards ? 
+    empathyCard.cards.map(card => ({
+      quote: card.quote_text || card.content?.substring(0, 100) + "...",
+      date: card.news_title || card.news_date || "최근 뉴스",
+      sub: card.content || "",
+      emotion_keywords: card.emotion_keywords || [],
+      news_link: card.news_link || null,
+      news_provider: card.news_provider || ""
+    })) :
+    [
+      {
+        quote:
+          "매일 아침 회사에 가는 게 너무 힘들어요. 일요일 저녁이면 가슴이 답답해지고, 월요일 아침 알람 소리가 공포스러워요.",
+        date: "2024년 3월 직장인 번아웃 실태 보도",
+        sub: "이런 마음 정말 힘드시죠… 월요병이라고 가볍게 넘기기엔 너무 무거운 마음이에요.",
+      },
+      {
+        quote:
+          "퇴사하고 싶다는 생각을 하루에도 몇 번씩 해요. 하지만 다음 직장도 똑같을까 봐 무서워서 참고 있어요.",
+        date: "2024년 5월 MZ세대 직장 문화 기사",
+        sub: "떠나고 싶지만 떠날 수 없는 막막함, 갇혀있는 느낌이 들겠어요.",
+      },
+      {
+        quote:
+          "주변 사람들은 다 잘 지내는 것 같은데, 나만 이렇게 힘든가 싶어서 더 외로웠어요.",
+        date: "2024년 4월 청년 고민담 특집 기사",
+        sub: "SNS 속 행복한 모습들 사이에서 혼자만 뒤처진 것 같은 외로움… 당신만 느끼는 감정이 아니에요.",
+      },
+    ];
 
   return (
     <PageWrapper
-      title="공감의 메아리"
+      title={empathyCard?.title || "당신의 마음을 이해해요"}
       titleClass="text-[#5C4033]" // 제목 색상 브라운
       subtitle={
         <span className="text-[#6B4F3B]">
-          이 모든 목소리들이 당신의 이야기예요. <br className="hidden md:inline" />
-          당신은 혼자가 아닙니다. 나와 비슷한 사람들의 목소리를 들어보세요.
+          {empathyCard?.cards?.length > 0 ? 
+            <>같은 고민을 하는 사람들의 목소리를 들어보세요. <br className="hidden md:inline" />
+            당신의 마음이 충분히 이해받을 만한 것임을 알게 될 거예요.</> :
+            <>이 모든 목소리들이 당신의 이야기예요. <br className="hidden md:inline" />
+            당신은 혼자가 아닙니다. 나와 비슷한 사람들의 목소리를 들어보세요.</>
+          }
         </span>
       }
-      tags={["진로/취업", "취업이 계속 안돼요"]}
+      tags={empathyCard?.emotion_keywords || ["진로/취업", "취업이 계속 안돼요"]}
       tagClass="bg-white text-blue-600 border border-blue-200 shadow-sm"
     >
       <div className="relative">
@@ -86,11 +104,24 @@ export default function EmpathyPage() {
                   “{it.quote}”
                 </blockquote>
 
-                <p className="text-xs md:text-sm text-slate-500">[ {it.date} ]</p>
+                <p className="text-xs md:text-sm text-slate-500">
+                  [ {it.news_provider || "출처"} {it.date && it.date !== "관련 뉴스" ? `- ${it.date}` : ""} ]
+                </p>
 
-                <button className="text-sm text-blue-600 font-semibold hover:text-blue-700 hover:underline">
-                  더 자세히 보기 &gt;
-                </button>
+                {it.news_link ? (
+                  <a 
+                    href={it.news_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 font-semibold hover:text-blue-700 hover:underline"
+                  >
+                    원문 보기 &gt;
+                  </a>
+                ) : (
+                  <div className="text-sm text-gray-400">
+                    뉴스 링크 준비 중
+                  </div>
+                )}
 
                 <div className="flex items-center gap-1.5 text-blue-500/90">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-current" />

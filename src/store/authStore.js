@@ -19,6 +19,8 @@ const authStore = create(
           onboardingCompleted: user?.onboardingCompleted || false
         }),
         
+        setOnboardingCompleted: (completed) => set({ onboardingCompleted: completed }),
+        
         setLoading: (loading) => set({ loading }),
         
         // 인증 체크

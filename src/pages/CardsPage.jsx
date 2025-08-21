@@ -10,34 +10,52 @@ import GrowthPage from "./GrowthPage.jsx";
 export default function CardsPage() {
   const location = useLocation();
   const [step, setStep] = useState(1); // 1: 공감, 2: 성찰, 3: 성장
+  const [sessionData, setSessionData] = useState(null);
 
   useEffect(() => {
-    // 1) /cards?step=2 처럼 쿼리스트링으로 온 값 우선 적용
+    // 세션 데이터 가져오기
+    const stateData = location.state?.sessionData;
+    const storedData = sessionStorage.getItem('meariSessionData');
+    
+    console.log('CardsPage - location.state:', location.state);
+    console.log('CardsPage - sessionStorage data:', storedData);
+    
+    if (stateData) {
+      console.log('Using state data:', stateData);
+      setSessionData(stateData);
+    } else if (storedData) {
+      console.log('Using stored data:', JSON.parse(storedData));
+      setSessionData(JSON.parse(storedData));
+    } else {
+      console.log('No session data found');
+    }
+
+    // 카드 타입에 따라 스텝 설정
     const params = new URLSearchParams(location.search);
-    const qsStep = Number(params.get("step"));
-
-    if ([1, 2, 3].includes(qsStep)) {
-      setStep(qsStep);
-      return;
+    const cardType = params.get("type");
+    
+    if (cardType === 'empathy') {
+      setStep(1);
+    } else if (cardType === 'reflection') {
+      setStep(2);
+    } else if (cardType === 'growth') {
+      setStep(3);
+    } else {
+      // 기존 step 파라미터 처리
+      const qsStep = Number(params.get("step"));
+      if ([1, 2, 3].includes(qsStep)) {
+        setStep(qsStep);
+      }
     }
-
-    // 2) (보조) history state 로 온 값 적용
-    const incoming = location.state?.step;
-    if ([1, 2, 3].includes(incoming)) {
-      setStep(incoming);
-      return;
-    }
-
-    // 3) 그 외에는 기본값(1) 유지
   }, [location.search, location.state]);
 
   return (
     <div className="min-h-screen text-slate-800">
       <TopBar step={step} setStep={setStep} />
 
-      {step === 1 && <EmpathyPage />}
-      {step === 2 && <ReflectionPage />}
-      {step === 3 && <GrowthPage />}
+      {step === 1 && <EmpathyPage sessionData={sessionData} />}
+      {step === 2 && <ReflectionPage sessionData={sessionData} />}
+      {step === 3 && <GrowthPage sessionData={sessionData} />}
 
       <footer className="py-10 text-center text-xs text-slate-400">
         © {new Date().getFullYear()} Echo UI

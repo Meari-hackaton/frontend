@@ -1,4 +1,5 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 /* 아이콘 */
 function PlaneIcon({ className = "" }) {
@@ -38,10 +39,37 @@ function GlassButton({ children, onClick, className = "" }) {
 
 export default function EchoLanding() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [sessionData, setSessionData] = useState(null);
 
-const go = (step) => {
-  navigate(`/cards?step=${step}`);   // ✅ 쿼리스트링으로 전달 (새로고침에도 유지)
-};
+  useEffect(() => {
+    // location.state 또는 sessionStorage에서 세션 데이터 가져오기
+    const stateData = location.state?.sessionData;
+    const storedData = sessionStorage.getItem('meariSessionData');
+    
+    console.log('EchoLanding - location.state:', location.state);
+    console.log('EchoLanding - sessionStorage:', storedData);
+    
+    if (stateData) {
+      console.log('Using state sessionData:', stateData);
+      setSessionData(stateData);
+    } else if (storedData) {
+      console.log('Using stored sessionData:', JSON.parse(storedData));
+      setSessionData(JSON.parse(storedData));
+    } else {
+      console.log('No session data available');
+    }
+  }, [location]);
+
+  const go = (cardType) => {
+    // 세션 데이터와 함께 카드 페이지로 이동
+    navigate(`/cards?type=${cardType}`, { 
+      state: { 
+        sessionData,
+        cardType 
+      }
+    });
+  };
   return (
     <div className="relative min-h-screen overflow-hidden">
       {/* 배경 */}
@@ -66,7 +94,7 @@ const go = (step) => {
             <p className="text-[#4b2d19] font-medium leading-snug mb-6">
               나와 비슷한 사람들을 <br /> 찾고싶다면?
             </p>
-            <GlassButton onClick={() => go(1)}>공감의 메아리</GlassButton>
+            <GlassButton onClick={() => go('empathy')}>공감의 메아리</GlassButton>
           </div>
 
           {/* 성찰 */}
@@ -75,7 +103,7 @@ const go = (step) => {
             <p className="text-[#4b2d19] font-medium leading-snug mb-6">
               나 혼자만의 문제가 <br /> 아닐 수 있다고?
             </p>
-            <GlassButton onClick={() => go(2)}>성찰의 메아리</GlassButton>
+            <GlassButton onClick={() => go('reflection')}>성찰의 메아리</GlassButton>
           </div>
 
           {/* 성장 */}
@@ -84,7 +112,7 @@ const go = (step) => {
             <p className="text-[#4b2d19] font-medium leading-snug mb-6">
               세상으로 한 발짝 <br /> 나아가 볼까?
             </p>
-            <GlassButton onClick={() => go(3)}>성장의 메아리</GlassButton>
+            <GlassButton onClick={() => go('growth')}>성장의 메아리</GlassButton>
           </div>
         </section>
       </main>

@@ -16,8 +16,8 @@ import Dashboard from "./pages/Dashboard.jsx";
 import Signup from "./pages/Signup"; 
 import GreetingPage from "./pages/GreetingPage.jsx";
 // Protected Route 컴포넌트
-function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading, checkAuth } = authStore();
+function ProtectedRoute({ children, requireOnboarding = false }) {
+  const { isAuthenticated, onboardingCompleted, loading, checkAuth } = authStore();
   
   useEffect(() => {
     if (!isAuthenticated && !loading) {
@@ -31,6 +31,11 @@ function ProtectedRoute({ children }) {
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+  
+  // 온보딩이 필요한 페이지인데 완료하지 않은 경우
+  if (requireOnboarding && !onboardingCompleted) {
+    return <Navigate to="/steps" replace />;
   }
   
   return children;
