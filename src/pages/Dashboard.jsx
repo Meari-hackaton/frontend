@@ -817,24 +817,39 @@ export default function Dashboard() {
       {/* 배경 (큰 그라데이션, 중앙이 비어 보이게) */}
       <div className="absolute inset-0 bg-[radial-gradient(1200px_700px_at_48%_55%,rgba(147,197,253,0.46),transparent_60%)]" />
 
-      {/* 상단바(오른쪽 로그인/로그아웃) */}
-      <header className="relative z-10 flex items-center justify-end gap-3 w-full max-w-[1280px] mx-auto px-8 pt-7">
-        <div className="text-slate-500 text-sm">{username}</div>
-        {isAuthenticated ? (
-          <button
-            onClick={logout}
-            className="rounded-full bg-red-500 text-white px-5 py-2 text-sm shadow-[0_10px_24px_rgba(220,38,38,0.28)] hover:brightness-110"
-          >
-            로그아웃
-          </button>
-        ) : (
-          <Link
-            to="/login"
-            className="rounded-full bg-blue-600 text-white px-5 py-2 text-sm shadow-[0_10px_24px_rgba(30,64,175,0.28)] hover:brightness-110"
-          >
-            로그인
-          </Link>
-        )}
+      {/* 상단바 (로고 왼쪽, 로그인/로그아웃 오른쪽) */}
+      <header className="relative z-10 flex items-center justify-between w-full max-w-[1280px] mx-auto px-8 pt-7">
+        {/* 메아리 로고 */}
+        <Link to="/dashboard" className="flex items-center hover:scale-110 transition-transform">
+          <div className="bg-gradient-to-br from-sky-300 to-sky-400 rounded-full p-3 shadow-md">
+            <img 
+              src={require('../assets/images/meari-logo.png')}
+              alt="MEARI"
+              className="h-6 w-auto brightness-0 invert"
+              style={{ filter: 'brightness(0) invert(1)' }}
+            />
+          </div>
+        </Link>
+        
+        {/* 사용자 정보 및 로그인/로그아웃 */}
+        <div className="flex items-center gap-3">
+          <div className="text-slate-500 text-sm">{username}</div>
+          {isAuthenticated ? (
+            <button
+              onClick={logout}
+              className="rounded-full bg-red-500 text-white px-5 py-2 text-sm shadow-[0_10px_24px_rgba(220,38,38,0.28)] hover:brightness-110"
+            >
+              로그아웃
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              className="rounded-full bg-blue-600 text-white px-5 py-2 text-sm shadow-[0_10px_24px_rgba(30,64,175,0.28)] hover:brightness-110"
+            >
+              로그인
+            </Link>
+          )}
+        </div>
       </header>
 
       {/* 본문 레이아웃: 왼쪽 칩, 오른쪽 고정 컬럼 */}
