@@ -365,6 +365,7 @@ export default function StepsWizard() {
             // 새 세션이므로 이전 카드 열람 기록 삭제
             localStorage.removeItem('viewedEchoTypes');
             localStorage.removeItem('viewedEchoCards');
+            sessionStorage.removeItem('echoInitialized'); // 초기화 플래그도 리셋
             
             // EchoLanding 페이지로 이동 (공감/성찰/성장 카드 선택)
             navigate('/echo', { 

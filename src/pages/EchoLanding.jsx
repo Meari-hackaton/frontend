@@ -43,6 +43,25 @@ export default function EchoLanding() {
   const [sessionData, setSessionData] = useState(null);
   const [viewedTypes, setViewedTypes] = useState(new Set());
   const [showDashboardButton, setShowDashboardButton] = useState(false);
+  
+  // 디버깅용 - 콘솔에서 테스트 가능
+  useEffect(() => {
+    window.debugEcho = {
+      viewedTypes: [...viewedTypes],
+      showButton: showDashboardButton,
+      sessionData: sessionData,
+      testLocalStorage: () => {
+        const test = ['empathy', 'reflection', 'growth'];
+        localStorage.setItem('viewedEchoTypes', JSON.stringify(test));
+        console.log('Set test data:', localStorage.getItem('viewedEchoTypes'));
+      },
+      clearStorage: () => {
+        localStorage.removeItem('viewedEchoTypes');
+        sessionStorage.removeItem('viewedEchoTypes');
+        console.log('Cleared storage');
+      }
+    };
+  }, [viewedTypes, showDashboardButton, sessionData]);
 
   useEffect(() => {
     // location.state 또는 sessionStorage에서 세션 데이터 가져오기
@@ -54,10 +73,15 @@ export default function EchoLanding() {
     console.log('EchoLanding - sessionStorage:', storedData);
     console.log('EchoLanding - isFromWizard:', isFromWizard);
     
-    // StepsWizard에서 온 새로운 세션이면 localStorage 초기화
-    if (isFromWizard || stateData) {
-      console.log('New session detected, clearing localStorage');
-      localStorage.removeItem('viewedEchoTypes'); // 이전 기록 삭제
+    // 이미 처리했는지 확인 (한 번만 초기화)
+    const alreadyProcessed = sessionStorage.getItem('echoInitialized');
+    
+    // StepsWizard에서 온 새로운 세션이면 localStorage 초기화 (한 번만)
+    if (isFromWizard && !alreadyProcessed) {
+      console.log('New session detected, clearing storage');
+      localStorage.removeItem('viewedEchoTypes'); // localStorage 삭제
+      sessionStorage.removeItem('viewedEchoTypes'); // sessionStorage도 삭제
+      sessionStorage.setItem('echoInitialized', 'true'); // 초기화 완료 표시
       setViewedTypes(new Set());
       setShowDashboardButton(false);
       
@@ -72,9 +96,14 @@ export default function EchoLanding() {
       console.log('Existing session - restoring viewed types');
       setSessionData(JSON.parse(storedData));
       
-      // 기존 세션일 때 이전 기록 복원
-      const savedViewed = localStorage.getItem('viewedEchoTypes');
-      console.log('Saved viewed types:', savedViewed);
+      // 기존 세션일 때 이전 기록 복원 (localStorage 우선, 없으면 sessionStorage)
+      const savedViewedLocal = localStorage.getItem('viewedEchoTypes');
+      const savedViewedSession = sessionStorage.getItem('viewedEchoTypes');
+      const savedViewed = savedViewedLocal || savedViewedSession;
+      
+      console.log('Saved viewed types (local):', savedViewedLocal);
+      console.log('Saved viewed types (session):', savedViewedSession);
+      console.log('Using:', savedViewed);
       
       if (savedViewed) {
         const viewed = new Set(JSON.parse(savedViewed));
@@ -104,14 +133,32 @@ export default function EchoLanding() {
     
     console.log('New viewed types:', [...newViewedTypes]);
     
-    // localStorage에 저장
+    // localStorage와 sessionStorage 모두에 저장
     const typesArray = [...newViewedTypes];
-    localStorage.setItem('viewedEchoTypes', JSON.stringify(typesArray));
-    console.log('Saved to localStorage:', typesArray);
     
-    // 확인용 - 바로 다시 읽어보기
-    const savedData = localStorage.getItem('viewedEchoTypes');
-    console.log('Verified localStorage:', savedData);
+    try {
+      // localStorage 저장 시도
+      window.localStorage.setItem('viewedEchoTypes', JSON.stringify(typesArray));
+      console.log('Saved to localStorage:', typesArray);
+      
+      // sessionStorage에도 백업
+      window.sessionStorage.setItem('viewedEchoTypes', JSON.stringify(typesArray));
+      console.log('Saved to sessionStorage:', typesArray);
+      
+      // 확인용 - 바로 다시 읽어보기
+      const savedLocal = window.localStorage.getItem('viewedEchoTypes');
+      const savedSession = window.sessionStorage.getItem('viewedEchoTypes');
+      console.log('Verified localStorage:', savedLocal);
+      console.log('Verified sessionStorage:', savedSession);
+    } catch (error) {
+      console.error('Storage save error:', error);
+      // 에러가 나도 sessionStorage는 시도
+      try {
+        window.sessionStorage.setItem('viewedEchoTypes', JSON.stringify(typesArray));
+      } catch (e) {
+        console.error('SessionStorage also failed:', e);
+      }
+    }
     
     // 모든 타입을 봤는지 체크
     if (newViewedTypes.size === 3) {
@@ -214,17 +261,18 @@ export default function EchoLanding() {
         {/* 대시보드 이동 버튼 */}
         {showDashboardButton && (
           <div className="mt-12 text-center animate-fade-in">
-            <div className="mb-6">
-              <p className="text-xl font-bold text-[#4b2d19]">
+            <div className="mb-6" style={{ marginTop: '-10px' }}>
+              <p className="text-xl font-bold text-[#4b2d19]" style={{ marginBottom: '8px' }}>
                 모든 메아리를 확인했어요!
               </p>
-              <p className="text-gray-600 text-sm mt-2">
+              <p className="text-gray-600 text-sm">
                 당신만의 성장 이야기가 시작됩니다
               </p>
             </div>
             <GlassButton 
               onClick={() => navigate('/dashboard')}
               className="mx-auto"
+              style={{ marginTop: '20px' }}
             >
               새로운 여정을 시작해볼까요?
             </GlassButton>
