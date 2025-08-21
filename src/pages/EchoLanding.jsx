@@ -117,21 +117,14 @@ export default function EchoLanding() {
         </section>
       </main>
       
-
-      {/* 하단 웨이브 */}
-      <svg
-        className="absolute bottom-[-8px] left-[-6%] w-[112%] max-w-none text-[#6da0ff]"
-        viewBox="0 0 1200 180"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M0,120 C220,180 520,40 780,120 C960,170 1080,150 1200,90"
-          stroke="currentColor"
-          strokeWidth="3"
-          fill="none"
-          strokeLinecap="round"
+      {/* 하단 이미지 - Vector 2.png */}
+      <div className="absolute bottom-0 left-0 w-full">
+        <img 
+          src={require('../assets/images/vector2.png')}
+          alt="Wave decoration"
+          className="w-full h-auto"
         />
-      </svg>
+      </div>
     </div>
   );
 }

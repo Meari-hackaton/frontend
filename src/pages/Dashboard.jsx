@@ -107,10 +107,10 @@ function RitualStatsCard({ year: controlledYear, month: controlledMonth }) {
   };
 
   return (
-    <Card className="w-[520px]">
-      <div className="flex items-center justify-between mb-3">
-        <div className="font-semibold text-slate-700">
-          리추얼 통계 <span className="text-slate-400 text-sm">{year}년 {month}월</span>
+    <Card className="w-[420px] p-4">
+      <div className="flex items-center justify-between mb-2">
+        <div className="font-semibold text-slate-700 text-[14px]">
+          리추얼 통계 <span className="text-slate-400 text-[12px]">{year}년 {month}월</span>
         </div>
       </div>
 
@@ -346,30 +346,30 @@ function MiniCalendar() {
   };
   return (
     <>
-      <Card className="p-0 overflow-hidden w-[520px]">
+      <Card className="p-0 overflow-hidden w-[380px]">
         {/* 헤더 */}
-        <div className="px-8 pt-6 pb-3">
-          <div className="flex items-center justify-center gap-6 text-slate-600">
-            <button onClick={goPrev} className="text-slate-400 hover:text-slate-600">◀</button>
-            <div className="text-[15px] font-semibold">
+        <div className="px-5 pt-3 pb-1">
+          <div className="flex items-center justify-center gap-4 text-slate-600">
+            <button onClick={goPrev} className="text-slate-400 hover:text-slate-600 text-[12px]">◀</button>
+            <div className="text-[13px] font-semibold">
               {monthLabel}{" "}
               {(loading || sessionsLoading) && (
-                <span className="ml-2 text-xs text-slate-400">(불러오는 중)</span>
+                <span className="ml-1 text-[10px] text-slate-400">(불러오는 중)</span>
               )}
             </div>
-            <button onClick={goNext} className="text-slate-400 hover:text-slate-600">▶</button>
+            <button onClick={goNext} className="text-slate-400 hover:text-slate-600 text-[12px]">▶</button>
           </div>
         </div>
 
         {/* 요일 */}
-        <div className="grid grid-cols-7 text-center text-[12px] text-slate-400 px-8 pb-2">
+        <div className="grid grid-cols-7 text-center text-[9px] text-slate-400 px-5 pb-1">
           {["일","월","화","수","목","금","토"].map((d) => (
-            <div key={d} className="py-1">{d}</div>
+            <div key={d} className="py-0">{d}</div>
           ))}
         </div>
 
         {/* 날짜 */}
-        <div className="grid grid-cols-7 gap-3 px-8 pb-4">
+        <div className="grid grid-cols-7 gap-1 px-5 pb-3">
           {weeks.map((row, i) =>
             row.map((d, j) => {
               const info = d ? daysMap.get(d) : null;
@@ -388,7 +388,7 @@ function MiniCalendar() {
                       onClick={() => onClickDay(d)}
                       title={title}
                       className={
-                        "w-10 h-10 flex items-center justify-center rounded-full text-[13px] transition-all " +
+                        "w-6 h-6 flex items-center justify-center rounded-full text-[10px] transition-all " +
                         dayClasses(d)
                       }
                     >
@@ -403,24 +403,6 @@ function MiniCalendar() {
           )}
         </div>
 
-        {/* 요약 */}
-        <div className="px-8 pb-6">
-          {summary ? (
-            <div className="grid grid-cols-3 gap-3 text-[12px] text-slate-600">
-              <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
-                완료일수<br/><span className="text-[13px] font-semibold text-blue-700">{summary.completed_days}</span>
-              </div>
-              <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
-                달성률<br/><span className="text-[13px] font-semibold text-blue-700">{summary.completion_rate}%</span>
-              </div>
-              <div className="rounded-xl bg-white border border-blue-100 px-3 py-2 text-center">
-                연속일수<br/><span className="text-[13px] font-semibold text-blue-700">{summary.current_streak}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="text-[12px] text-slate-400">요약 정보를 불러오지 못했어요.</div>
-          )}
-        </div>
       </Card>
 
       {/* ───────── 모달 ───────── */}
@@ -884,16 +866,16 @@ export default function Dashboard() {
 
         {/* 우측 컬럼: 화면 오른쪽에 붙여 중앙을 넘지 않도록 고정 폭/위치 */}
         <aside className="pointer-events-none">
-          <div className="pointer-events-auto w-[400px] ml-auto mt-[-180px] mr-0 flex flex-col gap-6">
+          <div className="pointer-events-auto w-[380px] ml-auto mt-[-200px] mr-0 flex flex-col gap-2">
             {/* 오늘의 소식 */}
-            <Card className="w-[520px]">
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <BellIcon className="w-6 h-6" />
+            <Card className="w-[380px] p-3">
+              <div className="flex items-start gap-2">
+                <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                  <BellIcon className="w-4 h-4" />
                 </div>
                 <div className="flex-1">
-                  <div className="font-semibold text-slate-700 mb-1">오늘의 소식</div>
-                  <p className="text-[13px] text-slate-500 leading-relaxed">
+                  <div className="font-semibold text-slate-700 text-[13px]">오늘의 소식</div>
+                  <p className="text-[11px] text-slate-500 leading-tight mt-1">
                     {dashboardData?.notifications?.[0]?.message || `${username}에게 알맞은 정책 정보가 있습니다.`} <br />
                     {todayRitual ? '오늘의 리츄얼을 확인해보세요.' : '새로운 리츄얼을 받아보시겠습니까?'}
                   </p>
@@ -902,32 +884,32 @@ export default function Dashboard() {
             </Card>
 
             {/* 리추얼 실천하기 */}
-            <Card className="w-[520px]">
-              <div className="font-semibold text-slate-700 mb-4">오늘의 리추얼</div>
+            <Card className="w-[380px] p-3">
+              <div className="font-semibold text-slate-700 text-[13px] mb-2">오늘의 리추얼</div>
               {loading ? (
-                <div className="text-center py-8 text-slate-400">로딩 중...</div>
+                <div className="text-center py-4 text-slate-400 text-[12px]">로딩 중...</div>
               ) : todayRitual ? (
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
                   <div 
-                    className="flex items-center gap-3 cursor-pointer"
+                    className="flex items-center gap-2 cursor-pointer"
                     onClick={handleRitualComplete}
                   >
                     <CheckIcon done={todayRitual.is_completed} />
-                    <div className={"text-[14px] flex-1 " + (todayRitual.is_completed ? "text-blue-700" : "text-slate-600")}>
+                    <div className={"text-[12px] flex-1 " + (todayRitual.is_completed ? "text-blue-700" : "text-slate-600")}>
                       {todayRitual.title}
                     </div>
                   </div>
                   {todayRitual.is_completed && (
-                    <div className="text-[12px] text-green-600 ml-8">
+                    <div className="text-[10px] text-green-600 ml-6">
                       ✨ 오늘의 리츄얼을 완료했어요!
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="text-center py-4 text-slate-400">
+                <div className="text-center py-2 text-slate-400 text-[11px]">
                   아직 오늘의 리츄얼이 없어요.
                   <br />
-                  <Link to="/steps" className="text-blue-600 hover:underline mt-2 inline-block">
+                  <Link to="/steps" className="text-blue-600 hover:underline mt-1 inline-block text-[11px]">
                     리츄얼 받으러 가기 →
                   </Link>
                 </div>
@@ -936,25 +918,25 @@ export default function Dashboard() {
 
             {/* 마음나무 상태 */}
             {dashboardData?.tree && (
-              <Card className="w-[520px]">
-                <div className="font-semibold text-slate-700 mb-3">나의 마음나무</div>
-                <div className="bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[14px] text-slate-600">
+              <Card className="w-[380px] p-3">
+                <div className="font-semibold text-slate-700 text-[13px] mb-2">나의 마음나무</div>
+                <div className="bg-gradient-to-br from-green-50 to-green-100/50 rounded-lg p-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] text-slate-600">
                       {dashboardData.tree.stage_label} 단계
                     </span>
-                    <span className="text-[12px] text-green-600">
+                    <span className="text-[10px] text-green-600">
                       {dashboardData.tree.level}/28일
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 rounded-full h-1">
                     <div 
-                      className="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full transition-all"
+                      className="bg-gradient-to-r from-green-400 to-green-600 h-1 rounded-full transition-all"
                       style={{ width: `${dashboardData.tree.percentage}%` }}
                     />
                   </div>
                   {dashboardData.tree.next_milestone && (
-                    <div className="mt-2 text-[11px] text-slate-500">
+                    <div className="mt-1 text-[9px] text-slate-500">
                       다음 단계까지 {dashboardData.tree.next_milestone - dashboardData.tree.level}일 남았어요
                     </div>
                   )}
@@ -964,48 +946,32 @@ export default function Dashboard() {
 
             {/* 달력 카드 */}
             <MiniCalendar />
-            {/*통계*/}
-            <RitualStatsCard />
           </div>
         </aside>
       </main>
 
-{/* 하단 CTA (중앙 오른쪽 쪽에 위치) */}
-<div className="relative z-10 w-full max-w-[1280px] mx-auto px-8">
-  <div className="flex justify-center">
-    <div className="translate-x-[10px] pb-8">
-      <Link
-        to="/steps"
-        className="
-          inline-flex items-center gap-3
-          rounded-full px-6 py-3
-          bg-white text-blue-600
-          border border-blue-200
-          shadow-[0_10px_26px_rgba(30,64,175,0.20)]
-          hover:bg-blue-50 hover:shadow-[0_12px_30px_rgba(30,64,175,0.25)]
-          transition-colors
-        "
-      >
-        <PenIcon className="w-4 h-4" />
-        <span className="text-[14px] font-medium">오늘의 리추얼 받기</span>
-        <span className="ml-1 text-[16px]">»»</span>
-      </Link>
-    </div>
-  </div>
+{/* 나무 이미지 (중앙 왼쪽) */}
+<div className="absolute bottom-10 left-1/2 transform -translate-x-[350px] z-5">
+  <img 
+    src={require('../assets/images/tree-asset14.png')}
+    alt="마음나무"
+    className="h-[350px] w-auto object-contain opacity-95"
+    style={{ filter: 'drop-shadow(0 20px 40px rgba(100,150,200,0.12))' }}
+  />
+</div>
+
+{/* 메아리 실행하기 버튼 (하단 중앙) */}
+<div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
+  <Link to="/steps" className="inline-block hover:scale-105 transition-transform">
+    <img 
+      src={require('../assets/images/group4480.png')}
+      alt="오늘의 리추얼 받기"
+      className="h-[40px] w-auto drop-shadow-md"
+    />
+  </Link>
 </div>
 
 
-      {/* 좌하단 잎 장식 */}
-      <svg
-        viewBox="0 0 200 120"
-        className="hidden sm:block absolute left-16 bottom-6 w-40 h-28 text-blue-200"
-        fill="currentColor"
-        opacity={0.7}
-      >
-        <path d="M90 120h20c0-30-10-45-10-45s-10 15-10 45z" />
-        <path d="M80 105c-8 0-25-4-35-10 14-14 41-11 41-11s-3 21-6 21z" />
-        <path d="M120 105c8 0 25-4 35-10-14-14-41-11-41-11s3 21 6 21z" />
-      </svg>
     </div>
 
     
