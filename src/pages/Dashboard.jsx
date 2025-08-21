@@ -202,6 +202,20 @@ function MiniCalendar() {
   const [openModal, setOpenModal] = useState(false);
   const [modalDateStr, setModalDateStr] = useState(""); // YYYY-MM-DD
   const [modalRows, setModalRows] = useState([]);       // 선택 날짜의 세션들
+  
+  // 날짜별 리츄얼 데이터 (조회/수정)
+  const [dateLoading, setDateLoading] = useState(false);
+  const [dateErr, setDateErr] = useState(null);
+  const [dateData, setDateData] = useState(null);
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    daily_title: "",
+    daily_description: "",
+    daily_user_mood: "",
+    meari_diary_entry: "",
+    meari_selected_mood: "",
+  });
 
   // 공통: 날짜 문자열 추출(백엔드 필드 다양성 방어)
   const getDateStr = (s) =>
@@ -258,6 +272,70 @@ function MiniCalendar() {
       setMonthSessions([]);
     } finally {
       setSessionsLoading(false);
+    }
+  };
+
+  // 날짜별 리츄얼 조회
+  const fetchDateRitual = async (ymd) => {
+    try {
+      setDateLoading(true);
+      setDateErr(null);
+      const data = await meariService.getDateRitual(ymd);
+      setDateData(data || null);
+      
+      // 폼 데이터 설정
+      const d = data?.daily_ritual || {};
+      const m = data?.meari_ritual || {};
+      setForm({
+        daily_title: d.title ?? "",
+        daily_description: d.description ?? "",
+        daily_user_mood: d.user_mood ?? "",
+        meari_diary_entry: m.diary_entry ?? "",
+        meari_selected_mood: m.selected_mood ?? "",
+      });
+    } catch (e) {
+      console.error("날짜 리츄얼 조회 실패:", e);
+      setDateErr(e);
+      setDateData(null);
+      setForm({
+        daily_title: "",
+        daily_description: "",
+        daily_user_mood: "",
+        meari_diary_entry: "",
+        meari_selected_mood: "",
+      });
+    } finally {
+      setDateLoading(false);
+    }
+  };
+  
+  // 날짜별 리츄얼 저장
+  const saveDateRitual = async () => {
+    if (!modalDateStr) return;
+    try {
+      setSaving(true);
+      await meariService.updateDateRitual(modalDateStr, {
+        allow_completed_edit: false,
+        daily_ritual: {
+          title: form.daily_title?.trim() || null,
+          description: form.daily_description?.trim() || null,
+          user_mood: form.daily_user_mood?.trim() || null,
+        },
+        meari_ritual: {
+          diary_entry: form.meari_diary_entry?.trim() || null,
+          selected_mood: form.meari_selected_mood?.trim() || null,
+        },
+      });
+      // 저장 후 재조회
+      await fetchDateRitual(modalDateStr);
+      await fetchCalendar(year, month);
+      setEditMode(false);
+      alert("저장했어요.");
+    } catch (e) {
+      console.error("날짜 리츄얼 저장 실패:", e);
+      alert("저장에 실패했어요.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -321,7 +399,9 @@ function MiniCalendar() {
     });
 
     setModalRows(rows);
+    setEditMode(false); // 편집 모드 초기화
     setOpenModal(true);
+    fetchDateRitual(ymd); // 날짜별 리츄얼 조회
   };
 
   // 세션 행 표시용 헬퍼
@@ -405,44 +485,174 @@ function MiniCalendar() {
 
       </Card>
 
-      {/* ───────── 모달 ───────── */}
+      {/* ───────── 날짜별 리츄얼 모달 ───────── */}
       {openModal && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
-          {/* backdrop */}
           <button
             className="absolute inset-0 bg-slate-900/40"
             onClick={() => setOpenModal(false)}
-            aria-label="close modal backdrop"
           />
-          {/* dialog */}
-          <div className="relative w-full max-w-[560px] mx-3 sm:mx-0 rounded-2xl bg-white border border-blue-100 shadow-[0_24px_60px_rgba(30,64,175,0.25)] p-5">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-[15px] font-semibold text-slate-800">{modalDateStr} 기록</div>
+          <div className="relative w-full max-w-[600px] mx-3 sm:mx-0 rounded-2xl bg-white border border-blue-100 shadow-[0_24px_60px_rgba(30,64,175,0.25)] p-6 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-[16px] font-semibold text-slate-800">{modalDateStr} 리츄얼</div>
               <button
                 onClick={() => setOpenModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-lg"
-                aria-label="close modal"
+                className="text-slate-400 hover:text-slate-600 text-2xl"
               >
                 ×
               </button>
             </div>
 
-            {modalRows.length === 0 ? (
-              <div className="text-[13px] text-slate-500">이 날짜에는 기록이 없어요.</div>
+            {dateLoading ? (
+              <div className="space-y-3 animate-pulse">
+                <div className="h-4 w-40 bg-slate-200 rounded" />
+                <div className="h-4 w-56 bg-slate-200 rounded" />
+                <div className="h-4 w-44 bg-slate-200 rounded" />
+              </div>
+            ) : dateErr ? (
+              <div className="text-[14px] text-red-500">해당 날짜 리츄얼을 불러오지 못했습니다.</div>
+            ) : editMode ? (
+              // 편집 모드
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <h3 className="text-[14px] font-semibold text-slate-700">일일 리츄얼</h3>
+                  <div>
+                    <label className="text-[12px] text-slate-500">제목</label>
+                    <input
+                      value={form.daily_title}
+                      onChange={(e) => setForm(f => ({ ...f, daily_title: e.target.value }))}
+                      className="w-full rounded-lg border border-blue-100 px-3 py-2 text-[13px] mt-1"
+                      placeholder="오늘의 리츄얼 제목"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[12px] text-slate-500">설명</label>
+                    <textarea
+                      rows={3}
+                      value={form.daily_description}
+                      onChange={(e) => setForm(f => ({ ...f, daily_description: e.target.value }))}
+                      className="w-full rounded-lg border border-blue-100 px-3 py-2 text-[13px] mt-1"
+                      placeholder="리츄얼에 대한 설명"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[12px] text-slate-500">기분</label>
+                    <input
+                      value={form.daily_user_mood}
+                      onChange={(e) => setForm(f => ({ ...f, daily_user_mood: e.target.value }))}
+                      className="w-full rounded-lg border border-blue-100 px-3 py-2 text-[13px] mt-1"
+                      placeholder="오늘의 기분"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <h3 className="text-[14px] font-semibold text-slate-700">메아리 일기</h3>
+                  <div>
+                    <label className="text-[12px] text-slate-500">일기 내용</label>
+                    <textarea
+                      rows={4}
+                      value={form.meari_diary_entry}
+                      onChange={(e) => setForm(f => ({ ...f, meari_diary_entry: e.target.value }))}
+                      className="w-full rounded-lg border border-blue-100 px-3 py-2 text-[13px] mt-1"
+                      placeholder="오늘의 메아리 일기"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[12px] text-slate-500">선택한 감정</label>
+                    <input
+                      value={form.meari_selected_mood}
+                      onChange={(e) => setForm(f => ({ ...f, meari_selected_mood: e.target.value }))}
+                      className="w-full rounded-lg border border-blue-100 px-3 py-2 text-[13px] mt-1"
+                      placeholder="오늘 느낀 감정"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex justify-end gap-2 mt-6">
+                  <button
+                    onClick={() => setEditMode(false)}
+                    className="rounded-full border border-slate-200 px-4 py-2 text-[13px] text-slate-600 hover:bg-slate-50"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={saveDateRitual}
+                    disabled={saving}
+                    className="rounded-full bg-blue-600 text-white px-4 py-2 text-[13px] hover:brightness-110 disabled:opacity-50"
+                  >
+                    {saving ? "저장 중..." : "저장"}
+                  </button>
+                </div>
+              </div>
             ) : (
-              <ul className="text-[13px]">
-                {modalRows.map((s, idx) => renderRow(s, idx))}
-              </ul>
+              // 조회 모드
+              <div className="space-y-4">
+                {dateData?.daily_ritual && (
+                  <div className="space-y-2">
+                    <h3 className="text-[14px] font-semibold text-slate-700">일일 리츄얼</h3>
+                    {dateData.daily_ritual.title && (
+                      <div>
+                        <span className="text-[12px] text-slate-500">제목: </span>
+                        <span className="text-[13px] text-slate-700">{dateData.daily_ritual.title}</span>
+                      </div>
+                    )}
+                    {dateData.daily_ritual.description && (
+                      <div>
+                        <span className="text-[12px] text-slate-500">설명: </span>
+                        <span className="text-[13px] text-slate-700">{dateData.daily_ritual.description}</span>
+                      </div>
+                    )}
+                    {dateData.daily_ritual.user_mood && (
+                      <div>
+                        <span className="text-[12px] text-slate-500">기분: </span>
+                        <span className="text-[13px] text-slate-700">{dateData.daily_ritual.user_mood}</span>
+                      </div>
+                    )}
+                    {dateData.daily_ritual.is_completed && (
+                      <div className="text-[12px] text-green-600">✅ 완료됨</div>
+                    )}
+                  </div>
+                )}
+                
+                {dateData?.meari_ritual && (
+                  <div className="space-y-2">
+                    <h3 className="text-[14px] font-semibold text-slate-700">메아리 일기</h3>
+                    {dateData.meari_ritual.diary_entry && (
+                      <div>
+                        <span className="text-[12px] text-slate-500">일기: </span>
+                        <p className="text-[13px] text-slate-700 whitespace-pre-wrap">{dateData.meari_ritual.diary_entry}</p>
+                      </div>
+                    )}
+                    {dateData.meari_ritual.selected_mood && (
+                      <div>
+                        <span className="text-[12px] text-slate-500">감정: </span>
+                        <span className="text-[13px] text-slate-700">{dateData.meari_ritual.selected_mood}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {!dateData?.daily_ritual && !dateData?.meari_ritual && (
+                  <div className="text-[13px] text-slate-500">이 날짜에는 기록이 없어요.</div>
+                )}
+                
+                <div className="flex justify-end gap-2 mt-6">
+                  <button
+                    onClick={() => setOpenModal(false)}
+                    className="rounded-full border border-slate-200 px-4 py-2 text-[13px] text-slate-600 hover:bg-slate-50"
+                  >
+                    닫기
+                  </button>
+                  <button
+                    onClick={() => setEditMode(true)}
+                    className="rounded-full bg-blue-600 text-white px-4 py-2 text-[13px] hover:brightness-110"
+                  >
+                    수정
+                  </button>
+                </div>
+              </div>
             )}
-
-            <div className="flex justify-end mt-4">
-              <button
-                onClick={() => setOpenModal(false)}
-                className="rounded-full border border-slate-200 px-4 py-2 text-[13px] text-slate-600 hover:bg-slate-50"
-              >
-                닫기
-              </button>
-            </div>
           </div>
         </div>
       )}

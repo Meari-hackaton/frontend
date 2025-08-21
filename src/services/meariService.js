@@ -123,6 +123,28 @@ const meariService = {
       throw error;
     }
   },
+  
+  // 특정 날짜의 리츄얼 조회
+  async getDateRitual(targetDate) {
+    try {
+      const response = await api.get(`/api/v1/calendar/date/${targetDate}/ritual`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch date ritual:', error);
+      throw error;
+    }
+  },
+  
+  // 특정 날짜의 리츄얼 수정
+  async updateDateRitual(targetDate, data) {
+    try {
+      const response = await api.put(`/api/v1/calendar/date/${targetDate}/ritual`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to update date ritual:', error);
+      throw error;
+    }
+  },
 
   // 메아리 일기 작성
   async createDiary(data) {
