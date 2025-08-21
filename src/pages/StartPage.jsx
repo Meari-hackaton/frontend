@@ -9,8 +9,14 @@ export default function StartPage() {
   const navigate = useNavigate();
   return (
     <div className="relative min-h-screen overflow-hidden flex items-center justify-center">
-      {/* 배경 (Dashboard와 동일) */}
-      <div className="absolute inset-0 bg-[radial-gradient(1200px_700px_at_48%_55%,rgba(147,197,253,0.46),transparent_60%)]" />
+      {/* 배경 이미지 */}
+      <div className="absolute inset-0">
+        <img 
+          src={require('../assets/images/Group 4491.png')}
+          alt="Background"
+          className="w-full h-full object-cover"
+        />
+      </div>
 
       {/* 로그인 상태 표시 */}
       {isAuthenticated && (
@@ -24,15 +30,6 @@ export default function StartPage() {
           </button>
         </div>
       )}
-
-      {/* 하단 웨이브 라인과 종이빔행기 */}
-      <div className="absolute bottom-0 left-0 w-full">
-        <img 
-          src={require('../assets/images/wave-airplane.png')}
-          alt="Wave and Airplane"
-          className="w-full h-auto"
-        />
-      </div>
       
       {/* 중앙 콘텐츠 */}
       <div className="relative z-10 flex flex-col items-center text-center px-6">

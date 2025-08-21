@@ -1187,7 +1187,16 @@ export default function Dashboard() {
 
 {/* 메아리 실행하기 버튼 (하단 중앙) */}
 <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
-  <Link to="/steps" className="inline-block hover:scale-105 transition-transform">
+  <Link 
+    to="/steps" 
+    className="inline-block hover:scale-105 transition-transform"
+    onClick={() => {
+      // 새로운 메아리 세션을 위해 이전 기록 삭제
+      localStorage.removeItem('viewedEchoTypes');
+      localStorage.removeItem('viewedEchoCards');
+      sessionStorage.removeItem('meariSessionData');
+    }}
+  >
     <img 
       src={require('../assets/images/group4480.png')}
       alt="오늘의 리추얼 받기"

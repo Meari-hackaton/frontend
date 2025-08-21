@@ -38,11 +38,22 @@ function GlassButton({ children, onClick }) {
 }
 
 /* ===== 공통 레이아웃 ===== */
-function StepLayout({ stepText, chips = [], title, subtitle, children, onBack, hideBack, below }) {
+function StepLayout({ stepText, chips = [], title, subtitle, children, onBack, hideBack, below, backgroundImage }) {
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* 배경 */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#eef4ff] via-[#cfe0ff] to-[#e9f0ff]" />
+      {backgroundImage ? (
+        <div className="absolute inset-0 transition-all duration-1000 ease-in-out">
+          <img 
+            src={backgroundImage}
+            alt="Background"
+            className="w-full h-full object-cover animate-fadeIn"
+            key={backgroundImage}
+          />
+        </div>
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-[#eef4ff] via-[#cfe0ff] to-[#e9f0ff]" />
+      )}
 
       {/* Back (좌상단 고정) */}
       {!hideBack && (
@@ -75,8 +86,6 @@ function StepLayout({ stepText, chips = [], title, subtitle, children, onBack, h
         </div>
       </div>
 
-      {/* 하단 SVG(웨이브+비행기) */}
-      {below}
     </div>
   );
 }
@@ -192,9 +201,9 @@ export default function StepsWizard() {
       <StepLayout
         stepText="1/3"
         hideBack
-        title="“안녕하세요, 당신의 이야기를 듣고싶어요.”"
+        title="안녕하세요, 당신의 이야기를 듣고싶어요."
         subtitle="지금 겪고 계신 가장 큰 어려움은 어떤 종류인가요?"
-        below={BelowSvg}
+        backgroundImage={require('../assets/images/step1.png')}
       >
         <div className="flex flex-col items-center gap-5">
           {categories.map((c) => (
@@ -220,9 +229,9 @@ export default function StepsWizard() {
       <StepLayout
         stepText="2/3"
         onBack={() => setStep(1)}
-        title={`“${answers.category?.split("/")[0]} 문제로 고민이 많으시군요.”`}
+        title={`${answers.category?.split("/")[0]} 문제로 고민이 많으시군요.`}
         subtitle="어떤 상황과 가장 비슷한가요?"
-        below={BelowSvg}
+        backgroundImage={require('../assets/images/2.png')}
       >
         <div className="flex items-center justify-center mb-4">
           <Pill>{answers.category}</Pill>
@@ -252,7 +261,7 @@ export default function StepsWizard() {
         onBack={() => setStep(2)}
         title="조금 더 자세히 들려주실 수 있나요?"
         subtitle="선택사항이에요. 편하게 이야기해주세요."
-        below={BelowSvg}
+        backgroundImage={require('../assets/images/step3.png')}
       >
         <div className="flex items-center justify-center mb-6 gap-2">
           {[answers.category, answers.detail].filter(Boolean).map((t, i) => (
@@ -315,7 +324,7 @@ export default function StepsWizard() {
       onBack={() => setStep(3)}
       title="메아리 받을 준비가 되셨나요?"
       subtitle="준비가 완료되셨다면 [메아리 받기] 버튼을 눌러주세요."
-      below={BelowSvg}
+      backgroundImage={require('../assets/images/태그 7.jpg')}
     >
       <div className="flex items-center justify-center mb-4 gap-2">
         {[answers.category, answers.detail].filter(Boolean).map((t, i) => (
@@ -352,6 +361,10 @@ export default function StepsWizard() {
             // 세션 데이터를 저장하고 결과 페이지로 이동
             sessionStorage.setItem('meariSessionData', JSON.stringify(response));
             console.log('Saved to sessionStorage:', sessionStorage.getItem('meariSessionData'));
+            
+            // 새 세션이므로 이전 카드 열람 기록 삭제
+            localStorage.removeItem('viewedEchoTypes');
+            localStorage.removeItem('viewedEchoCards');
             
             // EchoLanding 페이지로 이동 (공감/성찰/성장 카드 선택)
             navigate('/echo', { 

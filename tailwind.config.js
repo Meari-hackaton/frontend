@@ -25,6 +25,8 @@ module.exports = {
       animation: {
         'float': 'float 6s ease-in-out infinite',
         'plane-fly': 'plane-fly 8s ease-in-out infinite',
+        'fadeIn': 'fadeIn 0.8s ease-in-out',
+        'slideIn': 'slideIn 1s ease-out',
       },
       keyframes: {
         float: {
@@ -34,6 +36,14 @@ module.exports = {
         'plane-fly': {
           '0%, 100%': { transform: 'translateX(0px) translateY(0px)' },
           '50%': { transform: 'translateX(20px) translateY(-15px)' },
+        },
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideIn: {
+          '0%': { transform: 'translateX(-30px)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
         }
       },
       // 글래스모피즘 효과

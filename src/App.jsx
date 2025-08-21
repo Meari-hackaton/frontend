@@ -9,6 +9,7 @@ import StartPage from "./pages/StartPage.jsx";
 import CardsPage from "./pages/CardsPage.jsx";
 import StepsWizard from "./pages/StepsWizard.jsx";
 import EchoLanding from "./pages/EchoLanding.jsx";
+import EchoCardsPage from "./pages/EchoCardsPage.jsx";
 import InfoConnect from "./pages/Connect/InfoConnect.jsx";
 import ExperienceConnect from "./pages/Connect/ExperienceConnect.jsx";
 import SupportConnect from "./pages/Connect/SupportConnect.jsx";
