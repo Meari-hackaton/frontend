@@ -1151,7 +1151,7 @@ export default function Dashboard() {
                       {dashboardData.tree.stage_label} 단계
                     </span>
                     <span className="text-[10px] text-green-600">
-                      {dashboardData.tree.level}/28일
+                      레벨 {dashboardData.tree.level}
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-1">
@@ -1162,7 +1162,7 @@ export default function Dashboard() {
                   </div>
                   {dashboardData.tree.next_milestone && (
                     <div className="mt-1 text-[9px] text-slate-500">
-                      다음 단계까지 {dashboardData.tree.next_milestone - dashboardData.tree.level}일 남았어요
+                      다음 단계까지 {dashboardData.tree.next_milestone - dashboardData.tree.level}번의 성장이 필요해요
                     </div>
                   )}
                 </div>
