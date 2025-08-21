@@ -1178,9 +1178,20 @@ export default function Dashboard() {
 {/* 나무 이미지 (중앙 왼쪽) */}
 <div className="absolute bottom-10 left-1/2 transform -translate-x-[350px] z-5">
   <img 
-    src={require('../assets/images/tree-asset14.png')}
+    src={require(`../assets/images/${
+      dashboardData?.tree?.stage === 'seed' ? 'tree1' :
+      dashboardData?.tree?.stage === 'sprouting' ? 'tree2' :
+      dashboardData?.tree?.stage === 'growing' ? 'tree3' :
+      dashboardData?.tree?.stage === 'blooming' ? 'tree4' :
+      'tree4'  // full_bloom도 tree4 사용
+    }.png`)}
     alt="마음나무"
-    className="h-[350px] w-auto object-contain opacity-95"
+    className={`w-auto object-contain opacity-95 ${
+      dashboardData?.tree?.stage === 'seed' ? 'h-[150px]' :
+      dashboardData?.tree?.stage === 'sprouting' ? 'h-[200px]' :
+      dashboardData?.tree?.stage === 'growing' ? 'h-[280px]' :
+      'h-[350px]'  // blooming, full_bloom
+    }`}
     style={{ filter: 'drop-shadow(0 20px 40px rgba(100,150,200,0.12))' }}
   />
 </div>
