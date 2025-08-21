@@ -29,8 +29,17 @@ export default function GreetingPage({ onStart, onHistory }) {
 
       console.log('리츄얼 생성 완료:', response);
       
-      // 대시보드로 이동
-      navigate('/dashboard');
+      // 성장 콘텐츠를 sessionStorage에 저장
+      const growthData = {
+        ...sessionData,
+        growthContents: response.cards,
+        context: 'ritual',
+        timestamp: new Date().toISOString()
+      };
+      sessionStorage.setItem('meariSessionData', JSON.stringify(growthData));
+      
+      // GrowthPage로 이동하여 성장 콘텐츠 보여주기
+      navigate('/growth');
     } catch (err) {
       console.error('리츄얼 생성 실패:', err);
       setError('리츄얼을 받는데 실패했습니다. 다시 시도해주세요.');

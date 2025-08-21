@@ -17,6 +17,7 @@ import Dashboard from "./pages/Dashboard.jsx";
 import Signup from "./pages/Signup"; 
 import GreetingPage from "./pages/GreetingPage.jsx";
 import CompletionReport from "./pages/CompletionReport.jsx";
+import GrowthPage from "./pages/GrowthPage.jsx";
 // Protected Route 컴포넌트
 function ProtectedRoute({ children, requireOnboarding = false }) {
   const { isAuthenticated, onboardingCompleted, loading, checkAuth } = authStore();
@@ -94,6 +95,11 @@ export default function App() {
         <Route path="/completion" element={
           <ProtectedRoute>
             <CompletionReport />
+          </ProtectedRoute>
+        } />
+        <Route path="/growth" element={
+          <ProtectedRoute>
+            <GrowthPage />
           </ProtectedRoute>
         } />
 

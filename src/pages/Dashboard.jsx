@@ -1197,7 +1197,8 @@ export default function Dashboard() {
       dashboardData?.tree?.stage === 'sprouting' ? 'tree2' :
       dashboardData?.tree?.stage === 'growing' ? 'tree3' :
       dashboardData?.tree?.stage === 'blooming' ? 'tree4' :
-      'tree4'  // full_bloom도 tree4 사용
+      dashboardData?.tree?.stage === 'full_bloom' ? 'final_tree' :
+      'tree4'  // 기본값
     }.png`)}
     alt="마음나무"
     className={`w-auto object-contain opacity-95 ${
