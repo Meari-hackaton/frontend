@@ -1,5 +1,7 @@
 // src/components/TopBar.jsx
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import MidiPlayer from "./MidiPlayer";
 
 function Tab({ label, active, onClick }) {
   return (
@@ -31,16 +33,20 @@ function Tab({ label, active, onClick }) {
 }
 
 function NowPlaying() {
+  const [musicStarted, setMusicStarted] = useState(false);
+  
+  // 페이지 로드 후 1초 뒤에 음악 플레이어 표시
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMusicStarted(true);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
   return (
-    <div className="hidden md:flex items-center gap-3 rounded-2xl bg-blue-50 p-3 shadow-sm">
-      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-200 to-sky-200" />
-      <div className="min-w-[160px]">
-        <div className="text-sm font-semibold text-slate-800">Disorder</div>
-        <div className="text-xs text-slate-500">Joy Division</div>
-        <div className="mt-2 h-1.5 w-full rounded-full bg-blue-200">
-          <div className="h-1.5 w-1/3 rounded-full bg-blue-500" />
-        </div>
-      </div>
+    <div className="hidden md:block">
+      {musicStarted && <MidiPlayer autoPlay={true} />}
     </div>
   );
 }

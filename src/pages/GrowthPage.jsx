@@ -180,6 +180,7 @@ export default function GrowthPage({ sessionData }) {
       }
       tags={sessionData?.persona?.keywords || ["진로/취업", "성장"]}
     >
+      
       {/* 중앙 라디얼 블루 하이라이트 */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute left-1/2 top-[36%] h-[720px] w-[900px] -translate-x-1/2 rounded-full bg-[radial-gradient(600px_420px_at_center,rgba(118,163,255,0.32),transparent_65%)]" />

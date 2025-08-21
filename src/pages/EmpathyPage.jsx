@@ -73,6 +73,7 @@ export default function EmpathyPage({ sessionData }) {
       tags={empathyCard?.emotion_keywords || ["진로/취업", "취업이 계속 안돼요"]}
       tagClass="bg-white text-blue-600 border border-blue-200 shadow-sm"
     >
+      
       <div className="relative">
         {/* 하단 강조 그라데이션 (뒤로 보내기 z-0) */}
         <div aria-hidden className="absolute inset-x-0 -bottom-28 h-48 blur-2xl z-0">
