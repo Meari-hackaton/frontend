@@ -27,19 +27,30 @@ const authStore = create(
         checkAuth: async () => {
           set({ loading: true });
           try {
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/me`, {
+            const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+            const response = await fetch(`${apiUrl}/api/v1/auth/check`, {
               credentials: 'include'
             });
             
             if (response.ok) {
-              const userData = await response.json();
-              set({ 
-                user: userData, 
-                isAuthenticated: true,
-                onboardingCompleted: userData.onboardingCompleted || false,
-                loading: false 
-              });
-              return userData;
+              const data = await response.json();
+              if (data.authenticated) {
+                set({ 
+                  user: data.user, 
+                  isAuthenticated: true,
+                  onboardingCompleted: data.user?.onboardingCompleted || false,
+                  loading: false 
+                });
+                return data.user;
+              } else {
+                set({ 
+                  user: null, 
+                  isAuthenticated: false,
+                  onboardingCompleted: false,
+                  loading: false 
+                });
+                return null;
+              }
             } else {
               set({ 
                 user: null, 
@@ -64,7 +75,8 @@ const authStore = create(
         // 로그아웃
         logout: async () => {
           try {
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/logout`, {
+            const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+            const response = await fetch(`${apiUrl}/api/v1/auth/logout`, {
               method: 'POST',
               credentials: 'include'
             });
@@ -75,7 +87,7 @@ const authStore = create(
                 isAuthenticated: false,
                 onboardingCompleted: false
               });
-              window.location.href = '/';
+              window.location.href = '/login';
             }
           } catch (error) {
             console.error('Logout failed:', error);

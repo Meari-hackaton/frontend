@@ -1,13 +1,20 @@
 // src/pages/LoginPage.jsx
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authStore from '../store/authStore';
-import GoogleIcon from '../components/Icons/GoogleIcon';
-import { useGoogleLogin } from '@react-oauth/google';
+import api from '../services/api';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { isAuthenticated, setUser } = authStore();
+  const [isSignup, setIsSignup] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',  // 백엔드와의 호환성을 위해 email 필드 유지
+    password: '',
+    nickname: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -15,53 +22,36 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, navigate]);
 
-  // 1) 커스텀 버튼용 구글 로그인 훅
-  const login = useGoogleLogin({
-    flow: 'implicit',              // 프론트 전용(백엔드 교환 없이 access_token)
-    scope: 'openid email profile', // 필요시 추가 스코프
-    ux_mode: 'popup',
-    onSuccess: async (tokenResponse) => {
-      try {
-        // 2) access_token으로 구글 프로필 조회
-        const resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-        });
-        const profile = await resp.json(); // { sub, email, name, picture, ... }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
-        // 3) 프론트 상태 업데이트
-        setUser({
-          id: profile.sub,
-          email: profile.email,
-          name: profile.name,
-          avatar: profile.picture,
-          provider: 'google',
-        });
+    try {
+      const endpoint = isSignup ? '/api/v1/auth/signup' : '/api/v1/auth/login';
+      // 아이디를 이메일 형식으로 변환 (백엔드 호환성)
+      const requestData = {
+        ...formData,
+        email: formData.email.includes('@') ? formData.email : `${formData.email}@meari.com`
+      };
+      const response = await api.post(endpoint, requestData);
 
-        // 4) (선택) 서버에 프로필 전달
-        //    *나중에 백엔드 검증 붙일 계획이면 id_token도 함께 보내는 구조를 추천
-        await fetch(`${process.env.REACT_APP_API_URL}/auth/google/client-login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            profile,                     // 지금은 프로필만 사용
-            // id_token: ???  // implicit 흐름에선 기본적으로 access_token만 옵니다.
-          }),
-        });
-
-        navigate('/dashboard');
-      } catch (e) {
-        console.error(e);
+      if (response.status === 200 || response.status === 201) {
+        if (response.data.user) {
+          setUser(response.data.user);
+        }
+        navigate(isSignup ? '/steps' : '/dashboard');
       }
-    },
-    onError: (err) => {
-      console.error('Google login failed', err);
-    },
-  });
+    } catch (err) {
+      setError(err.response?.data?.detail || '오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // 5) 기존 UI 유지하고 onClick만 변경
   return (
     <div className="relative min-h-screen overflow-hidden flex items-center justify-center">
+      {/* 원래 배경 이미지 */}
       <div className="absolute inset-0">
         <img
           src={require('../assets/images/Group 4491.png')}
@@ -70,16 +60,18 @@ export default function LoginPage() {
         />
       </div>
 
-      <div className="relative z-10 flex flex-col items-center text-center px-6">
-        <div className="mb-6">
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6">
+        {/* 로고 */}
+        <div className="mb-8">
           <img
             src={require('../assets/images/meari-logo.png')}
-            alt="MEARI Logo"
+            alt="MEARI"
             className="w-20 h-auto"
           />
         </div>
 
-        <div className="text-center mb-12 max-w-md">
+        {/* 메인 텍스트 */}
+        <div className="text-center mb-10 max-w-md">
           <p className="text-white text-lg leading-relaxed mb-2">
             세상의 소음 속에서 길을 잃은 당신에게,
           </p>
@@ -88,14 +80,91 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* ✅ UI 그대로, 동작만 구글 팝업으로 */}
-        <button
-          onClick={() => login()}
-          className="flex items-center justify-center gap-3 bg-white text-blue-600 font-medium px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 min-w-[280px]"
-        >
-          <GoogleIcon className="w-5 h-5" />
-          구글로 시작하기
-        </button>
+        {/* 폼 영역 */}
+        <div className="w-full max-w-sm">
+          {/* 로그인/회원가입 탭 */}
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => {
+                setIsSignup(false);
+                setError('');
+                setFormData({ email: '', password: '', nickname: '' });
+              }}
+              className={`flex-1 py-3 rounded-full font-medium transition-all ${
+                !isSignup 
+                  ? 'bg-white text-blue-500 shadow-lg' 
+                  : 'bg-white/30 text-white hover:bg-white/40'
+              }`}
+            >
+              로그인
+            </button>
+            <button
+              onClick={() => {
+                setIsSignup(true);
+                setError('');
+                setFormData({ email: '', password: '', nickname: '' });
+              }}
+              className={`flex-1 py-3 rounded-full font-medium transition-all ${
+                isSignup 
+                  ? 'bg-white text-blue-500 shadow-lg' 
+                  : 'bg-white/30 text-white hover:bg-white/40'
+              }`}
+            >
+              회원가입
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <input
+                type="text"
+                placeholder="아이디"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-5 py-4 bg-white/90 backdrop-blur-sm rounded-full text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all"
+                required
+              />
+            </div>
+
+            <div>
+              <input
+                type="password"
+                placeholder="비밀번호"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="w-full px-5 py-4 bg-white/90 backdrop-blur-sm rounded-full text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all"
+                required
+              />
+            </div>
+
+            {isSignup && (
+              <div>
+                <input
+                  type="text"
+                  placeholder="닉네임 (대시보드에 표시됩니다)"
+                  value={formData.nickname}
+                  onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
+                  className="w-full px-5 py-4 bg-white/90 backdrop-blur-sm rounded-full text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all"
+                  required
+                />
+              </div>
+            )}
+
+            {error && (
+              <div className="p-3 bg-red-100/90 backdrop-blur-sm border border-red-300 text-red-700 rounded-2xl text-sm text-center">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-white text-blue-500 font-bold py-4 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? '처리중...' : (isSignup ? '회원가입하기' : '로그인하기')}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

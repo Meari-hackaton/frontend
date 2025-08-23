@@ -199,6 +199,19 @@ const meariService = {
       console.error('Failed to generate completion report:', error);
       throw error;
     }
+  },
+
+  // MIDI 음악 생성
+  async getMidiMusic() {
+    try {
+      const response = await api.get('/api/v1/create-midi', {
+        responseType: 'blob'
+      });
+      return URL.createObjectURL(response.data);
+    } catch (error) {
+      console.error('Failed to create MIDI music:', error);
+      throw error;
+    }
   }
 };
 

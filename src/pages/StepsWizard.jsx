@@ -306,7 +306,7 @@ export default function StepsWizard() {
             당신을 위한 메아리를 준비하고 있어요
           </h2>
           <p className="text-sm text-slate-500 mb-6">
-            잠시만 기다려주세요... (약 30-45초)
+            잠시만 기다려주세요... (약 1-2분 소요)
           </p>
           <div className="flex justify-center gap-2">
             <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>

@@ -1,7 +1,6 @@
 // src/App.jsx
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { GoogleOAuthProvider } from "@react-oauth/google"; // ✅ 추가
 import authStore from "./store/authStore";
 
 // pages
@@ -49,9 +48,8 @@ export default function App() {
   }, [checkAuth]);
 
   return (
-    <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}> {/* ✅ 추가 */}
-      <BrowserRouter>
-        <Routes>
+    <BrowserRouter>
+      <Routes>
           {/* 루트: 카드 화면 */}
           <Route path="/" element={<StartPage />} />
 
@@ -99,6 +97,5 @@ export default function App() {
           <Route path="*" element={<div style={{ padding: 40 }}>404</div>} />
         </Routes>
       </BrowserRouter>
-    </GoogleOAuthProvider>
   );
 }

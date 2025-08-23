@@ -277,6 +277,7 @@ export default function GrowthPage({ sessionData }) {
           </PanelCard>
         </PillColumn>
       </div>
+
     </PageWrapper>
   );
 }

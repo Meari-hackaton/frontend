@@ -1,5 +1,6 @@
 // src/components/TopBar.jsx
 import { useNavigate } from "react-router-dom";
+import MidiPlayer from "./MidiPlayer";
 
 function Tab({ label, active, onClick }) {
   return (
@@ -33,14 +34,7 @@ function Tab({ label, active, onClick }) {
 function NowPlaying() {
   return (
     <div className="hidden md:flex items-center gap-3 rounded-2xl bg-blue-50 p-3 shadow-sm">
-      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-200 to-sky-200" />
-      <div className="min-w-[160px]">
-        <div className="text-sm font-semibold text-slate-800">Disorder</div>
-        <div className="text-xs text-slate-500">Joy Division</div>
-        <div className="mt-2 h-1.5 w-full rounded-full bg-blue-200">
-          <div className="h-1.5 w-1/3 rounded-full bg-blue-500" />
-        </div>
-      </div>
+      <MidiPlayer autoPlay={false} />
     </div>
   );
 }

@@ -11,6 +11,7 @@ export default function PageWrapper({
   subtitleClass,
   tagClass,
   className,
+  rightElement,
 }) {
   return (
     <section className={cx("relative mx-auto max-w-6xl px-6 py-12", className)}>
@@ -18,6 +19,13 @@ export default function PageWrapper({
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-48 blur-2xl z-0">
         <div className="mx-auto h-full w-8/12 rounded-full bg-gradient-to-b from-blue-200/90 via-blue-100/70 to-transparent" />
       </div>
+
+      {/* 우측 상단 요소 */}
+      {rightElement && (
+        <div className="absolute top-6 right-6 z-20">
+          {rightElement}
+        </div>
+      )}
 
       <header className="relative z-10 text-center space-y-4">
         <h1

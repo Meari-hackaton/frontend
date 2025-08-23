@@ -3,7 +3,7 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000',
   withCredentials: true,
-  timeout: 60000,
+  timeout: 120000, // 2분으로 증가
   headers: {
     'Content-Type': 'application/json',
   },
@@ -28,7 +28,12 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // 인증 에러 처리
-      window.location.href = '/login';
+      console.error('401 Unauthorized:', error.response?.config?.url);
+      // /login 페이지에서는 리다이렉트하지 않음
+      if (!window.location.pathname.includes('/login')) {
+        // window.location.href = '/login';
+        console.log('Authentication required, but not redirecting for now');
+      }
     }
     return Promise.reject(error);
   }
